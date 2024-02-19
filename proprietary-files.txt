@@ -1320,11 +1320,6 @@ vendor/etc/.tp/.thermal_policy_08
 vendor/etc/.tp/thermal.conf
 vendor/etc/.tp/thermal.off.conf
 
-# USB
-vendor/bin/hw/android.hardware.usb@1.2-service-mediatekv2
-vendor/etc/init/android.hardware.usb@1.2-service-mediatekv2.rc
--vendor/etc/vintf/manifest/android.hardware.usb@1.2-service-mediatekv2.xml
-
 # Vibrator
 vendor/bin/hw/android.hardware.vibrator@1.0-service-mediatek
 vendor/etc/init/android.hardware.vibrator@1.0-service-mediatek.rc
