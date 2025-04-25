@@ -321,6 +321,9 @@ blob_fixups: blob_fixups_user_type = {
             'android.hardware.gnss-V1-ndk.so',
         ),
          
+    'vendor/lib64/hw/hwcomposer.mt6853.so' : blob_fixup()
+         .add_needed('libprocessgroup_shim.so')
+
 }  # fmt: skip
 
 module = ExtractUtilsModule(
