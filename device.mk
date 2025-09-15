@@ -263,7 +263,8 @@ DEVICE_PACKAGE_OVERLAYS += \
 
 PRODUCT_PACKAGES += \
     CannonCNSettingsProviderOverlay \
-    CannonGLSettingsProviderOverlay
+    CannonGLSettingsProviderOverlay \
+    NcmTetheringOverlay
 
 PRODUCT_ENFORCE_RRO_TARGETS := *
 
