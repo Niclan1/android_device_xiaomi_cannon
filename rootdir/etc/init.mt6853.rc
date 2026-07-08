@@ -967,10 +967,3 @@ on property:vendor.camera.bokeh.disable=0
 on init
     symlink /dev/block/platform/bootdevice /dev/block/bootdevice
 
-service charger /system/bin/charger
-    class charger
-    user system
-    group system graphics input
-    capabilities SYS_BOOT
-    seclabel u:r:charger:s0
-    critical
