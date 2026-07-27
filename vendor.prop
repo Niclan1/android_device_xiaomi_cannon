@@ -249,6 +249,8 @@ ro.vendor.radio.features_common=2
 # Fingerprint
 ro.hardware.fp.sideCap=true
 ro.hardware.fp.vendor=goodix,fpc
+persist.vendor.fingerprint.type=side
+persist.vendor.fingerprint.sensor_location=1080|875|200|local:0
 
 # FM
 persist.vendor.connsys.fm_chipid=mt6631_6635
