@@ -236,6 +236,17 @@ blob_fixups: blob_fixups_user_type = {
             'libui-v30.so',
         ),
 
+    (
+        'vendor/lib64/libcodec2_soft_mtk_alacdec.so',
+        'vendor/lib64/libcodec2_soft_mtk_apedec.so',
+        'vendor/lib64/libcodec2_soft_mtk_imaadpcmdec.so',
+        'vendor/lib64/libcodec2_soft_mtk_mp3dec.so',
+        'vendor/lib64/libcodec2_soft_mtk_msadpcmdec.so'
+    ): blob_fixup()
+        .replace_needed('libcodec2_soft_common.so', 'libcodec2_soft_common-v31.so')
+        .replace_needed('libcodec2_vndk.so', 'libcodec2_vndk-v31.so')
+        .replace_needed('libstagefright_foundation.so', 'libstagefright_foundation-v33.so'),
+
     'vendor/lib64/libcodec2_soft_common-v31.so': blob_fixup()
         .replace_needed(
             'libcodec2_vndk.so',
