@@ -84,6 +84,9 @@ blob_fixups: blob_fixups_user_type = {
             'android.hardware.sensors@1.0-convert-shared.so',
         ),
 
+    'vendor/lib/hw/audio.primary.mt6853.so': blob_fixup()
+        .replace_needed('libalsautils.so', 'libalsautils-v31.so'),
+
     'vendor/etc/vintf/manifest/manifest_media_c2_V1_2_default.xml': blob_fixup()
         .regex_replace('1.1', '1.2'),
 
