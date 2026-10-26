@@ -23,6 +23,9 @@
     <!-- rounded corner content padding -->
     <dimen name="rounded_corner_content_padding">7.0dip</dimen>
 
+    <!-- Margin on the left side of the carrier text on Keyguard. -->
+    <dimen name="keyguard_carrier_text_margin">59dp</dimen>
+
     <!-- Location on the screen of the center of the fingerprint sensor. For devices with under
      display fingerprint sensors, this directly corresponds to the fingerprint sensor's location.
      For devices with sensors on the back of the device, this corresponds to the location on the
