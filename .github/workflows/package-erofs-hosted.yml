@@ -66,23 +66,28 @@ jobs:
           Keep the existing vanilla package and follow the device-specific installation/rollback guide.
           See validation.json and the SHA256 sidecar for the exact checks and source correspondence.
           EOF
-          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "cannong EROFS packaging candidate ${GITHUB_RUN_ID}" \
-            --draft --prerelease --latest=false --notes-file "$notes"
-          gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > "${RUNNER_TEMP}/cannong-erofs-release-list.json"
-          release_id="$(python3 - "$tag" "${RUNNER_TEMP}/cannong-erofs-release-list.json" "$GITHUB_SHA" <<'PY'
+          create_request="${RUNNER_TEMP}/cannong-erofs-create-request.json"
+          create_response="${RUNNER_TEMP}/cannong-erofs-create-response.json"
+          python3 - "$tag" "$notes" "$GITHUB_SHA" "$GITHUB_RUN_ID" "$create_request" <<'PY_CREATE_REQUEST'
+          import json, pathlib, sys
+          request = {'tag_name': sys.argv[1], 'target_commitish': sys.argv[3],
+                     'name': f'cannong EROFS packaging candidate {sys.argv[4]}',
+                     'body': pathlib.Path(sys.argv[2]).read_text(),
+                     'draft': True, 'prerelease': True, 'make_latest': 'false'}
+          pathlib.Path(sys.argv[5]).write_text(json.dumps(request))
+          PY_CREATE_REQUEST
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/releases" --input "$create_request" > "$create_response"
+          release_id="$(python3 - "$tag" "$create_response" "$GITHUB_SHA" <<'PY_RELEASE_ID'
           import json, sys
-          rows = json.load(open(sys.argv[2]))
-          matches = [row for row in rows if row.get('tag_name') == sys.argv[1]]
-          if len(matches) != 1:
-              raise SystemExit('Exactly one authenticated draft release must match the run tag')
-          row = matches[0]
-          if type(row.get('id')) is not int or row.get('draft') is not True or row.get('prerelease') is not True or row.get('target_commitish') != sys.argv[3]:
-              raise SystemExit('Draft release identity/state/target differs; preserve it for review')
+          row = json.load(open(sys.argv[2]))
+          if type(row.get('id')) is not int or row.get('tag_name') != sys.argv[1] or row.get('draft') is not True or row.get('prerelease') is not True or row.get('target_commitish') != sys.argv[3]:
+              raise SystemExit('Draft creation response identity/state/target differs; preserve it for review')
           print(row['id'])
-          PY
+          PY_RELEASE_ID
           )"
-          gh release upload "$tag" "$ARTIFACT_DIR"/* --repo "$GITHUB_REPOSITORY"
+          python3 release/gh-ci/upload_release_assets.py \
+            --creation-response "$create_response" --artifact-dir "$ARTIFACT_DIR" \
+            --expected-tag "$tag" --expected-target "$GITHUB_SHA"
           gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}" > "${RUNNER_TEMP}/cannong-erofs-server-assets.json"
           python3 - "${RUNNER_TEMP}/cannong-erofs-server-assets.json" <<'PY'
           import json, os, pathlib, sys
