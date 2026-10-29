@@ -1,0 +1,33 @@
+From a0fe468d63d7087697f396a7365f3ff7a5d18baf Mon Sep 17 00:00:00 2001
+From: Niclan1 <36455592+Niclan1@users.noreply.github.com>
+Date: Wed, 28 Oct 2026 10:07:20 +0000
+Subject: [PATCH] Apply cannong Android 17 component integration
+
+Maintainer-applied integration of existing implementations and port fixes.
+Original file copyright notices and upstream authorship are retained.
+See the release CREDITS.md and source provenance for direct patch donors.
+
+Upstream-base: 78ba5d58c4b06712e18bb387a2a72eac8fbc8d70
+Validated-source-tree: 73dae8eef5f6953805aa897864d29cd5372e8141
+---
+ extract_utils/makefiles.py | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/extract_utils/makefiles.py b/extract_utils/makefiles.py
+index 11225f01096970143d3b3f6ea7e0f3bebf8683cf..bf8d5d07bd63b0c874f715c77908cebeea7a5af7 100644
+--- a/extract_utils/makefiles.py
++++ b/extract_utils/makefiles.py
+@@ -481,11 +481,12 @@ def write_app_package(file: File, builder: FileBpBuilder):
+ 
+ 
+ def write_framework_package(file: File, builder: FileBpBuilder):
+-    _, package_name = file_stem_package_name(file)
++    stem, package_name = file_stem_package_name(file, can_have_stem=True)
+ 
+     (
+         builder.set_rule_name('dex_import')
+         .name(package_name)
++        .stem(stem)
+         .owner()
+         .jars()
+         .specific()

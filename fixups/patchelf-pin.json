@@ -1,0 +1,7 @@
+{
+  "extract_tools_default_version": "0_18",
+  "file_name": "patchelf-0_18",
+  "sha256": "b699cb82300dfd08ea6c895d8829b46bea970cfa737fa34188d8256ca89404e5",
+  "source_project": "prebuilts/extract-tools",
+  "source_revision": "aaeb969a477321411279c03799f45ae9f94f770b"
+}

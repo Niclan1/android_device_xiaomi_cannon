@@ -1,0 +1,37 @@
+{
+  "components": [
+    {
+      "path": "tools/extract-utils",
+      "base_revision": "78ba5d58c4b06712e18bb387a2a72eac8fbc8d70",
+      "base_tree": "00c1a5a4a08c8e4854992879c181c47f4c71dc19",
+      "result_revision": "a0fe468d63d7087697f396a7365f3ff7a5d18baf",
+      "result_tree": "73dae8eef5f6953805aa897864d29cd5372e8141",
+      "patch": "patches/tools__extract-utils.patch",
+      "patch_sha256": "c7c17d10d9f330d47db46e2d65aef747ef353aeb11fae83f51cba8f1555a3a88",
+      "committer_name": "Niclan1",
+      "committer_email": "36455592+Niclan1@users.noreply.github.com"
+    },
+    {
+      "path": "vendor/lineage",
+      "base_revision": "58d157ea32aac5908b304f05853d92e1b0ef67ba",
+      "base_tree": "206fc5fbae12a3c4794d4727b8fad13b6334e4a1",
+      "result_revision": "72394e53f09cfcaeed55dca5bf4b96afca1ce523",
+      "result_tree": "ee09bc243fdf5146acc380d00c464d9da17867ab",
+      "patch": "patches/vendor__lineage.patch",
+      "patch_sha256": "524bf083e3c0795de0e5c00f939a5130f63cc220b67bf595b857d530b64918f8",
+      "committer_name": "Niclan1",
+      "committer_email": "36455592+Niclan1@users.noreply.github.com"
+    },
+    {
+      "path": "external/libmnl",
+      "base_revision": "9607f96e5cb1d36088df84cb2e2f37955e2889cf",
+      "base_tree": "7a0cc0baedb1116fd8301ffe3146a3eed28c3ffd",
+      "result_revision": "d46bbac4a376bf46a981c7f7c66fab4d0899f3b9",
+      "result_tree": "8db6e098a26301de84f30b126dafe9221732a814",
+      "patch": "patches/external__libmnl.patch",
+      "patch_sha256": "5ff83adc36a270ed4fb84181092d712c1a5758b393def49c60deb34bc2894d37",
+      "committer_name": "Niclan1",
+      "committer_email": "36455592+Niclan1@users.noreply.github.com"
+    }
+  ]
+}

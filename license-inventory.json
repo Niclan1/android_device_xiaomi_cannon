@@ -1,0 +1,146 @@
+{
+  "status": "ACTUAL_SOURCE_NOTICE_INVENTORY",
+  "components": [
+    {
+      "component": "device/xiaomi/cannon",
+      "evidence_paths": [
+        "extract-files.py",
+        "shims/pcap_legacy.c",
+        "pq_elf_phdr.py"
+      ],
+      "license": "Apache-2.0",
+      "observation": "Existing SPDX/copyright headers; new PHDR helper explicitly licensed Apache-2.0 in publication. Original runtime source remains unchanged."
+    },
+    {
+      "component": "vendor/xiaomi/cannon",
+      "evidence_paths": [
+        "Android.bp",
+        "Android.mk",
+        "BoardConfigVendor.mk",
+        "cannon-vendor.mk"
+      ],
+      "license": "Generated rules; no proprietary license grant",
+      "observation": "Actual source snapshot:1476files,0LICENSE/NOTICE/COPYING. Public branch retains only4exact generated rules plus README,0parents,0proprietary payloads."
+    },
+    {
+      "component": "kernel/xiaomi/cannon",
+      "evidence_paths": [
+        "COPYING",
+        "kernel/bpf/lpm_trie.c",
+        "mm/userfaultfd.c",
+        "mm/kfence/core.c",
+        "kernel/cfi.c",
+        "drivers/hid/hid-playstation.c"
+      ],
+      "license": "GPL-2.0 plus file-specific SPDX/exception notices",
+      "observation": "COPYING and exact file headers retained; includes GPL-2.0-only LPM, GPL-2.0 KFENCE and GPL-2.0-or-later HID PlayStation."
+    },
+    {
+      "component": "system/core",
+      "evidence_paths": [
+        "init/util.cpp",
+        "init/first_stage_init.cpp"
+      ],
+      "license": "Apache-2.0",
+      "observation": "AOSP headers retained."
+    },
+    {
+      "component": "hardware/interfaces",
+      "evidence_paths": [
+        "health/utils/libhealthloop/filterPowerSupplyEvents.c",
+        "ir/aidl/default/main.cpp"
+      ],
+      "license": "Apache-2.0",
+      "observation": "AOSP headers retained."
+    },
+    {
+      "component": "packages/modules/Connectivity",
+      "evidence_paths": [
+        "bpf/loader/NetBpfLoad.cpp",
+        "bpf/netd/BpfHandler.cpp",
+        "bpf/progs/netd.c"
+      ],
+      "license": "File-specific AOSP/Lineage notices",
+      "observation": "Actual loader sample has Apache-2.0 header; retain all BPF source/header SPDX notices rather than blanket relicensing."
+    },
+    {
+      "component": "frameworks/opt/telephony",
+      "evidence_paths": [
+        "src/java/com/android/internal/telephony/gsm/GsmMmiCode.java"
+      ],
+      "license": "Apache-2.0",
+      "observation": "AOSP/Lineage headers and upstream patch provenance retained."
+    },
+    {
+      "component": "system/sepolicy",
+      "evidence_paths": [
+        "NOTICE",
+        "Android.bp",
+        "private/logpersist.te"
+      ],
+      "license": "Public-domain policy NOTICE; Apache-2.0 build-source headers",
+      "observation": "Actual NOTICE declares policy public domain and preserves NSA warranty text; Android.bp has AOSP Apache-2.0 header. Both retained."
+    },
+    {
+      "component": "build/soong",
+      "evidence_paths": [
+        "android/packaging.go"
+      ],
+      "license": "Apache-2.0",
+      "observation": "AOSP headers retained."
+    },
+    {
+      "component": "hardware/lineage/compat",
+      "evidence_paths": [
+        "frameworks/telephony-common-stub/src/com/android/internal/telephony/metrics/TelephonyMetrics.java",
+        "vndk/v30/arm/libui-v30.so",
+        "vndk/v30/arm64/libui-v30.so"
+      ],
+      "license": "Per-file source and prebuilt component notices",
+      "observation": "TelephonyMetrics source Apache-2.0; libui artifacts from public Lineage lineage-22.2 donor6cc7892; TinyXML-2 underlying source zlib. No aggregate LICENSE/NOTICE file in this maintained repository; original file notices/source links retained."
+    },
+    {
+      "component": "tools/extract-utils",
+      "evidence_paths": [
+        "extract_utils/makefiles.py"
+      ],
+      "license": "Apache-2.0",
+      "observation": "Existing source header retained."
+    },
+    {
+      "component": "vendor/lineage",
+      "evidence_paths": [
+        "LICENSE",
+        "tools/clean_headers.sh"
+      ],
+      "license": "Apache-2.0",
+      "observation": "Actual LICENSE credits CyanogenMod2011-15 and LineageOS2017; retained."
+    },
+    {
+      "component": "external/libmnl",
+      "evidence_paths": [
+        "COPYING",
+        "src/socket.c"
+      ],
+      "license": "LGPL-2.1-or-later",
+      "observation": "Actual socket.c header credits Pablo Neira Ayuso and explicitly permits2.1or later; COPYING retained."
+    }
+  ],
+  "additional_direct_tools": [
+    {
+      "path": "fixups/rename_mtkutils.py",
+      "license": "Apache-2.0",
+      "source": "itskenny0/haretic rabbit-r1 8eac590; exact source bytes retained"
+    },
+    {
+      "path": "LICENSES/TinyXML2-LICENSE.txt",
+      "license": "zlib",
+      "source": "actual external/tinyxml2/LICENSE.txt"
+    },
+    {
+      "path": "LICENSES/libpcap-LICENSE",
+      "license": "BSD-style original license",
+      "source": "actual external/libpcap/LICENSE"
+    }
+  ]
+}

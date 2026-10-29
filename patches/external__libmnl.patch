@@ -1,0 +1,28 @@
+From d46bbac4a376bf46a981c7f7c66fab4d0899f3b9 Mon Sep 17 00:00:00 2001
+From: Niclan1 <36455592+Niclan1@users.noreply.github.com>
+Date: Wed, 28 Oct 2026 15:19:30 +0000
+Subject: [PATCH] Apply cannong Android 17 component integration
+
+Maintainer-applied integration of existing implementations and port fixes.
+Original file copyright notices and upstream authorship are retained.
+See the release CREDITS.md and source provenance for direct patch donors.
+
+Upstream-base: 9607f96e5cb1d36088df84cb2e2f37955e2889cf
+Validated-source-tree: 8db6e098a26301de84f30b126dafe9221732a814
+---
+ Android.bp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Android.bp b/Android.bp
+index 23515440af725aed0257340cb1041154a45e78bd..5957970bbf398c85a4ce10f1219878be005a8b62 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -11,6 +11,8 @@ license {
+ 
+ cc_library_shared {
+     name: "libmnl",
++    // MediaTek GNSS has a distinct proprietary library named libmnl.so.
++    stem: "libmnl-netlink",
+     srcs: [
+         "src/attr.c",
+         "src/callback.c",

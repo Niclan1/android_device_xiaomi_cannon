@@ -1,0 +1,50 @@
+From 72394e53f09cfcaeed55dca5bf4b96afca1ce523 Mon Sep 17 00:00:00 2001
+From: Niclan1 <36455592+Niclan1@users.noreply.github.com>
+Date: Thu, 29 Oct 2026 02:14:44 +0000
+Subject: [PATCH] Apply cannong Android 17 component integration
+
+Maintainer-applied integration of existing implementations and port fixes.
+Original file copyright notices and upstream authorship are retained.
+See the release CREDITS.md and source provenance for direct patch donors.
+
+Upstream-base: 58d157ea32aac5908b304f05853d92e1b0ef67ba
+Validated-source-tree: ee09bc243fdf5146acc380d00c464d9da17867ab
+---
+ tools/clean_headers.sh | 27 +++++++++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/tools/clean_headers.sh b/tools/clean_headers.sh
+index 3a12160ca13e86048391c781787331ed913e93d9..99b2c4ad8b1fb0d0dabb7c5284dfd419283436ea 100755
+--- a/tools/clean_headers.sh
++++ b/tools/clean_headers.sh
+@@ -7,3 +7,30 @@ export ANDROID_BUILD_TOP="$PWD"
+     "$1/usr/include/asm/signal.h" \
+     "$1/usr/include/asm-generic/signal.h" \
+     "$1/usr/include/linux/eventpoll.h"
++
++# Bionic owns the POSIX sched_param definition. Older kernel exports still
++# declare it in linux/sched/types.h; retain sched_attr and all custom UAPI.
++if [ -f "$1/usr/include/linux/sched/types.h" ]; then
++    python3 - "$1/usr/include/linux/sched/types.h" <<'PY'
++import pathlib
++import re
++import sys
++sys.path.insert(0, "bionic/libc/kernel/tools")
++import cpp
++from utils import StringOutput
++path = pathlib.Path(sys.argv[1])
++text = path.read_text()
++if re.search(r"\bstruct\s+sched_param\s*\{", text):
++    parser = cpp.BlockParser()
++    blocks = parser.parseFile(str(path))
++    if not parser.parsed:
++        raise RuntimeError("Cannot parse exported scheduler header")
++    blocks.removeStructs({"sched_param": None})
++    output = StringOutput()
++    blocks.write(output)
++    cleaned = output.get()
++    if re.search(r"\bstruct\s+sched_param\s*\{", cleaned):
++        raise RuntimeError("Duplicate scheduler type survived parser cleanup")
++    path.write_text(cleaned)
++PY
++fi

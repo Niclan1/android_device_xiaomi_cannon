@@ -1,0 +1,11 @@
+{
+  "status": "THREE_POST_SYNC_PATCHES_FUNCTIONALLY_VALIDATED",
+  "checks": {
+    "all_project_preflight_dirty_refusal_without_partial_change": true,
+    "all_three_actual_patches_apply_cleanly": true,
+    "all_result_trees_exact": true,
+    "result_commit_ids_equal_prepared_objects": true,
+    "second_run_idempotent_and_clean": true
+  },
+  "scope": "Actual three-repository native Linux source checkouts from exact public bases. No Android main tree, build, phone or remote changes."
+}

@@ -1,0 +1,36 @@
+{
+  "status": "SELECTED_LICENSE_TEXTS_RETAINED",
+  "files": [
+    {
+      "file": "kernel-COPYING",
+      "source_path": "kernel/xiaomi/cannon/COPYING",
+      "sha256": "af8067302947c01fd9eee72befa54c7e3ef8a48fecde7fd71277f2290b2bf0f7",
+      "scope": "Kernel top-level license; preserve all per-file SPDX exceptions and author notices."
+    },
+    {
+      "file": "libmnl-COPYING",
+      "source_path": "external/libmnl/COPYING",
+      "sha256": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551",
+      "scope": "libmnl LGPL license; accompanying source headers identify LGPL-2.1-or-later."
+    },
+    {
+      "file": "libpcap-LICENSE",
+      "source_path": "external/libpcap/LICENSE",
+      "sha256": "8a54594d257e14a5260ac770f1633516cb51e3fc28c40136ce2697014eda7afd",
+      "scope": "libpcap original BSD-style license."
+    },
+    {
+      "file": "TinyXML2-LICENSE.txt",
+      "source_path": "external/tinyxml2/LICENSE.txt",
+      "sha256": "9332252e9b9e46db8285d4a3f0bf25f139bf1dca6781b956d57f2302efca6432",
+      "scope": "TinyXML-2 original zlib license."
+    },
+    {
+      "file": "Apache-2.0.txt",
+      "source_url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "scope": "Apache-2.0 source fixups and Android files with corresponding notices; not a blanket license for proprietary payloads."
+    }
+  ],
+  "qualification": "Original component repositories retain complete per-file notices. This selection is not a substitute for a complete generated release NOTICE/license inventory or proprietary redistribution review."
+}

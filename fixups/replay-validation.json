@@ -1,0 +1,29 @@
+{
+  "time_utc": "2026-10-29T18:23:07.904801+00:00",
+  "status": "PORTABLE_FIXUP_REPLAY_PASSED",
+  "tests": [
+    {
+      "name": "mtkutils",
+      "exit_code": 0,
+      "result": "{\"status\": \"EXACT_SEVEN_BLOB_RENAME_REPRODUCED\", \"files\": 7}"
+    },
+    {
+      "name": "telephony",
+      "exit_code": 0,
+      "result": "{\"status\": \"EXACT_TWO_OWNER_FIX_REPRODUCED\", \"output_sha256\": \"48f42f2501c308a47568517c58e8d5d351d7d0d52e108f06a8bef0f7a40211a4\", \"classes\": 128, \"methods\": 1239, \"old_invocations\": 0, \"new_invocations\": 2}"
+    },
+    {
+      "name": "pq",
+      "exit_code": 0,
+      "result": "{\"status\": \"EXACT_TWO_PQ_FIXUPS_REPRODUCED\", \"files\": [{\"path\": \"lib/hw/vendor.mediatek.hardware.pq@2.13-impl.so\", \"sha256\": \"1221809f03b7834195699c2a8633865418b5dea68a4a69224c8f681e5fb63186\", \"file_backed_phdr\": true, \"address_fields_only_after_dependency_rewrite\": true}, {\"path\": \"lib64/hw/vendor.mediatek.hardware.pq@2.13-impl.so\", \"sha256\": \"a5f8202e6f309a373b4e50443bb5c23d7b512df2204fbeb59e734cc13cea5f5d\", \"file_backed_phdr\": true, \"address_fields_only_after_dependency_rewrite\": true}]}"
+    }
+  ],
+  "scope": "Real original generic vendor inputs and existing pinned host tools. New temporary output only; no Android source, phone, build or remote modifications. No vendor payload included in public staging.",
+  "portable_io_note": "Initial shared-filesystem metadata-copy failure resolved by copying decoded source text only; no inherited chmod/copystat needed.",
+  "negative_tests": [
+    {
+      "name": "telephony_wrong_input_refused_before_output_or_work",
+      "passed": true
+    }
+  ]
+}

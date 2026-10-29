@@ -1,0 +1,49 @@
+{
+  "upstream": "https://github.com/haretic/android_device_rabbit_r1/blob/8eac590e24b83c24f39fada228132bda6b3b98fc/modem/rename-mtkutils.py",
+  "renamer_sha256": "b490f9ddc1b78f0d6846bbc63cdf4619cfaae404a352cc3a586bca49bdfee928",
+  "modern_vendor_libutils_sha256": "023ee78144ac548f5edc5b006b0811172332d328e555ab9d8d0a90c83227dca7",
+  "inputs": [
+    {
+      "name": "libvia-ril.so",
+      "before_sha256": "ee256ad4e4c030b1b736844e3c64b78bab3319ac3b94401588684faad0e709c1",
+      "after_sha256": "a0d4a0109d1e56c36874f8221efb414c523818759e3458c836cfe919bb397688",
+      "renamed_symbols": 3
+    },
+    {
+      "name": "librilfusion.so",
+      "before_sha256": "3809a195926aa57447b7df2204b6e94f0fe841e61fe16b438a253f76a0049e28",
+      "after_sha256": "44b383720373eb583f2af5fb2b06b07e0b5747c7832da5e5008179e9ee615542",
+      "renamed_symbols": 14
+    },
+    {
+      "name": "libviamipc-ril.so",
+      "before_sha256": "916cc0173569317e0eb355766318800ecc37ff46d854e9daaf13b29794255a7d",
+      "after_sha256": "ab04747bc3fe27dbba0c4ad97108b54a33b9d2c3727875bf3f3d830b5645385f",
+      "renamed_symbols": 5
+    },
+    {
+      "name": "libmtk-ril.so",
+      "before_sha256": "5b8043d41bd0a6eee1d76f403d35a5a854bacee60512ac6dc9441707bf2a6f2f",
+      "after_sha256": "bcf21f7e60cb8f9cfde2e488214d9f9663311bd311bcf4fad98edeb2bdfe53df",
+      "renamed_symbols": 75
+    },
+    {
+      "name": "libwpfa.so",
+      "before_sha256": "7840bb68203478252311c9d67efec203452c954165e5bace57c68eedd1130518",
+      "after_sha256": "9acf4243a4f54c4bdf2d8b6d368f1ef35f91694e0e0e9308df8be29f8c8934c6",
+      "renamed_symbols": 23
+    },
+    {
+      "name": "libmtkutils.so",
+      "before_sha256": "55a2870eda78c763b446884833035619aced774cdb10ab18807c9d511b083700",
+      "after_sha256": "cccf841985c4330b36119cee272bcf3ae1259d84ec230dd26397dbcf77b07867",
+      "renamed_symbols": 290
+    },
+    {
+      "name": "libmtkmipc-ril.so",
+      "before_sha256": "69feccb06d61f0c7cc6013c621d1b07cd09d7470635003e730202fa722fc2353",
+      "after_sha256": "30e8699ad195d9bf3c16be9e59cfc74efb0768a2b2450293812eff846c4a40f5",
+      "renamed_symbols": 76
+    }
+  ]
+}
