@@ -1,0 +1,224 @@
+{
+  "status": "LOCAL_SOURCE_ONLY_BRANCH_PREPARED_NOT_PUSHED",
+  "repository": "https://github.com/Niclan1/android_kernel_xiaomi_cannon",
+  "branch": "lineage-24.0-cannong-erofs",
+  "base_revision": "83a6778ef82186e6a56431c9c914b9f566a964aa",
+  "base_tree": "4696262a2ced18c90094a502bd480a2b95f49e8a",
+  "revision": "9b1c084c00cf9a82964387db268bfeceba803b96",
+  "tree": "96c85a2278f961260b930d185f631ce67fd358c1",
+  "component_path": "kernel/xiaomi/cannon",
+  "changed_paths": [
+    "arch/arm64/configs/cannon_defconfig",
+    "fs/Kconfig",
+    "fs/Makefile",
+    "fs/erofs/Kconfig",
+    "fs/erofs/Makefile",
+    "fs/erofs/compress.h",
+    "fs/erofs/data.c",
+    "fs/erofs/decompressor.c",
+    "fs/erofs/dir.c",
+    "fs/erofs/erofs_fs.h",
+    "fs/erofs/inode.c",
+    "fs/erofs/internal.h",
+    "fs/erofs/namei.c",
+    "fs/erofs/pcpubuf.c",
+    "fs/erofs/super.c",
+    "fs/erofs/tagptr.h",
+    "fs/erofs/utils.c",
+    "fs/erofs/xattr.c",
+    "fs/erofs/xattr.h",
+    "fs/erofs/zdata.c",
+    "fs/erofs/zdata.h",
+    "fs/erofs/zmap.c",
+    "fs/erofs/zpvec.h",
+    "include/linux/pagemap.h",
+    "include/trace/events/erofs.h",
+    "include/uapi/linux/magic.h",
+    "lib/lz4/lz4_compress.c",
+    "lib/lz4/lz4_decompress.c",
+    "lib/lz4/lz4defs.h",
+    "lib/lz4/lz4hc_compress.c"
+  ],
+  "source_files": [
+    {
+      "path": "arch/arm64/configs/cannon_defconfig",
+      "before_sha256": "700f796f73924b6168525f59661eba4b7d467e2824df67d944fdbc26770d988a",
+      "after_sha256": "6622aa40c0539032cf4dd984eddfe513ff80e8fef4e5f867080e9d441c208641"
+    },
+    {
+      "path": "fs/Kconfig",
+      "before_sha256": "3091aaa58cb45a2155c7f7569562dcb7ff9f34a85a8af92ca97f6217bd6bd179",
+      "after_sha256": "69300ea517a89b84fae28b7759a76d73fc5793a845e80a84d2e7fa8cd437c046"
+    },
+    {
+      "path": "fs/Makefile",
+      "before_sha256": "c0babae39b816794b1c69756804c44df3f181948a2544653588eb1854e089290",
+      "after_sha256": "1a93ca51182c46acabc8c51b8fe096dc87b6040db679fb16cd3616cc97ffa702"
+    },
+    {
+      "path": "fs/erofs/Kconfig",
+      "before_sha256": null,
+      "after_sha256": "74f92632b6ebe8141c688a542d6cf23ed25302bf1a826247670378ad4b32bc8d"
+    },
+    {
+      "path": "fs/erofs/Makefile",
+      "before_sha256": null,
+      "after_sha256": "c7352ca884c5e66f5e64651992ea0554c9e8990a9d10bcef34a9b8b65c7d0fbf"
+    },
+    {
+      "path": "fs/erofs/compress.h",
+      "before_sha256": null,
+      "after_sha256": "28e55863be73f0a73c54fe1a97428f7982e8f881d1860a00383314b20e5305e0"
+    },
+    {
+      "path": "fs/erofs/data.c",
+      "before_sha256": null,
+      "after_sha256": "8139b9c30172057115d0053f566d172447cb528b1341466064128d686e3e2411"
+    },
+    {
+      "path": "fs/erofs/decompressor.c",
+      "before_sha256": null,
+      "after_sha256": "2f3e0b5a8f0ff22bfba306232c186387a15e94ef49f215a71f9600b8783ac02b"
+    },
+    {
+      "path": "fs/erofs/dir.c",
+      "before_sha256": null,
+      "after_sha256": "da2f6d81687f353b71530b5512dab96d29a8af9c42933b9fa81da9f8fe3a98b5"
+    },
+    {
+      "path": "fs/erofs/erofs_fs.h",
+      "before_sha256": null,
+      "after_sha256": "1aa7b00e8df5f31838a473fcfa958c5fc1ff587be43aee2fbd6bde4a36ad50a1"
+    },
+    {
+      "path": "fs/erofs/inode.c",
+      "before_sha256": null,
+      "after_sha256": "a3e9557694fc252cf9e01904cdb016d037d639367e8832ec08aa61a30eb59a05"
+    },
+    {
+      "path": "fs/erofs/internal.h",
+      "before_sha256": null,
+      "after_sha256": "17ffdd95681ce04429eb21ac495a97841b0369fe7d78c15b7bbb94f2aadc5d1f"
+    },
+    {
+      "path": "fs/erofs/namei.c",
+      "before_sha256": null,
+      "after_sha256": "30c29c9fe7f66fb3ad9aa75c4820aaacd49f2d0708e4e1ada5dbb56bb9132a85"
+    },
+    {
+      "path": "fs/erofs/pcpubuf.c",
+      "before_sha256": null,
+      "after_sha256": "7d60dd8bf1a1b0e65d99e57664f06f6bcd1bd59586c0c08dcc9cb14e129d2879"
+    },
+    {
+      "path": "fs/erofs/super.c",
+      "before_sha256": null,
+      "after_sha256": "335fdcfefb04e1b3da2912bd1aaf1f9557e695a1d82da2724172edbfe47ff1a7"
+    },
+    {
+      "path": "fs/erofs/tagptr.h",
+      "before_sha256": null,
+      "after_sha256": "4139624cf60755ade72d5df0dc16dcb69fbc4b008dbb52e1425cf2d0d3a05d24"
+    },
+    {
+      "path": "fs/erofs/utils.c",
+      "before_sha256": null,
+      "after_sha256": "5f008e0fd7071aa472d2758eabd47d724787fc786b7d73d2e6140311d0a53caa"
+    },
+    {
+      "path": "fs/erofs/xattr.c",
+      "before_sha256": null,
+      "after_sha256": "0594b0f32863b45f0205faaadfce34db3debd471190a54cc028fccab4856ccbe"
+    },
+    {
+      "path": "fs/erofs/xattr.h",
+      "before_sha256": null,
+      "after_sha256": "d65ce6f0a00c1eb45011b90f4c13a70de3fbc813b74dfd4c3dd3760b7b8be1d1"
+    },
+    {
+      "path": "fs/erofs/zdata.c",
+      "before_sha256": null,
+      "after_sha256": "f8f4a9d03dbb283c505e65569ab3c00625a5ed3101cbde57e1f4596d9cf53d3e"
+    },
+    {
+      "path": "fs/erofs/zdata.h",
+      "before_sha256": null,
+      "after_sha256": "8fb964528adbd36323d857f724508a54c3222dd1b7b5d2d9d8f5ee981b6c39dd"
+    },
+    {
+      "path": "fs/erofs/zmap.c",
+      "before_sha256": null,
+      "after_sha256": "f47afd242bbdd23bf206feec4bf0d072e51d74a8011bc46cff5c00016f7c0464"
+    },
+    {
+      "path": "fs/erofs/zpvec.h",
+      "before_sha256": null,
+      "after_sha256": "80c8b499eb842cdbf9824e38b3caec88bc7122e0d2b0b2613017453ea982b681"
+    },
+    {
+      "path": "include/linux/pagemap.h",
+      "before_sha256": "e1a472ed666440a3440ad35e8fc0abb1abf56048e77b0acf973747db27b8a3ee",
+      "after_sha256": "cae9a3882b7229f80b877940af28b479811050c34d60d06a1dc9c6aff332a67e"
+    },
+    {
+      "path": "include/trace/events/erofs.h",
+      "before_sha256": null,
+      "after_sha256": "262f5dfe92a534fccf1cc95714edacdb7dd17c93bc0dd7b8f3f3b4841ad5b0c5"
+    },
+    {
+      "path": "include/uapi/linux/magic.h",
+      "before_sha256": "ef0f9af27b791e42d41381cebac1073123df1af46b8d58939b82b146fe56f3ec",
+      "after_sha256": "c3701332d5688ee439d85497612c34131a34dda7ddbcd537e64c75b6bcc71938"
+    },
+    {
+      "path": "lib/lz4/lz4_decompress.c",
+      "before_sha256": "36f074a7cd03b6c03f778b25d527451230128776202ff4681c9bc0f51ac90d68",
+      "after_sha256": "e610dad22a183255f56763b6b6be0c1e3f9f8aac62d145075df2a1ad7a851895"
+    },
+    {
+      "path": "lib/lz4/lz4defs.h",
+      "before_sha256": "494348886990f8b638fcc4aa63a1a474595c6a3b823491eca9d73bf04e4bc238",
+      "after_sha256": "9e63ba4301de41bb72ed7ebe261e9f9e2f0d0d3c7bd1461dc9d8a42c58e1cdfb"
+    },
+    {
+      "path": "lib/lz4/lz4_compress.c",
+      "before_sha256": "235b41bc5fc5f9e13850ee80b2daf443361ea671d3f97f069edc651eb52b3bd3",
+      "after_sha256": "e2ca698a4849cb5b6096f5626f16157e392ba146b848e7889c08148b9c29c0bc"
+    },
+    {
+      "path": "lib/lz4/lz4hc_compress.c",
+      "before_sha256": "e4d8d01e39b7f6edc82b5f85795b2548a80e0b6cd1c6a12321deb47bfdc20aff",
+      "after_sha256": "768b7f28fb11bc61e37e5c7d6bdbb1142f834b52ce474e76c65e6825272a312c"
+    }
+  ],
+  "patch": "kernel-erofs.patch",
+  "patch_sha256": "d7afccfcd39b547a315eed2d68270d0dcce5a57dfef2ca47e4b42e2e388f990e",
+  "format_patch": "0001-kernel-erofs.patch",
+  "format_patch_sha256": "f2b2e105822d15e7606b1c60b18f6703739b68d391c7c2995b23a9da0cae731e",
+  "authorship": "Maintainer-applied integration; original file copyright, license and upstream authors retained.",
+  "committer_name": "Niclan1",
+  "committer_email": "36455592+Niclan1@users.noreply.github.com",
+  "upstream": [
+    {
+      "url": "https://github.com/fangzny1/kernel_xiaomi_mt6853",
+      "revision": "ea65d0f51005a76cf210a9005f746d55eeb25132"
+    },
+    {
+      "url": "https://github.com/LineageOS/android_kernel_xiaomi_sm6150",
+      "revision": "e03e5ba22586be70673afb5d3c3f70510524e658"
+    }
+  ],
+  "qualification": "Source-only optional EROFS feature. Actual physical global Redmi Note 9T read-only mount, full four-file hashes twice and security.selinux context validation passed under enforcing Android policy; scope is this tested image feature set, not every EROFS feature or application.",
+  "validation": {
+    "physical_time_utc": "2026-10-29T20:29:58Z",
+    "physical_readonly_mount_hash_xattr_checks": 25,
+    "physical_failures": 0,
+    "physical_full_file_read_passes": 2,
+    "host_lz4_asan_ubsan_checks": 8915,
+    "host_lz4_failures": 0,
+    "vm_full_file_read_passes": 2,
+    "applications_tested": false,
+    "source_apply_regression": "Default verify, exact-commit apply, idempotent repeat and dirty-tree refusal passed locally",
+    "build_helper": "Default plan validated against exact source tree and actual pinned toolchain; no duplicate build launched"
+  }
+}
