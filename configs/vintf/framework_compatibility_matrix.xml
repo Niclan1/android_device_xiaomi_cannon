@@ -514,9 +514,9 @@
         <instance>default</instance>
     </interface>
 </hal>
-<hal format="hidl" optional="true">
+<hal format="aidl" optional="true">
     <name>android.hardware.vibrator</name>
-    <version>1.0</version>
+    <version>2</version>
     <interface>
         <name>IVibrator</name>
         <instance>default</instance>

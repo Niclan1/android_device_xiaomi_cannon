@@ -1,4 +1,4 @@
-<manifest version="4.0" type="device" target-level="6">
+<manifest version="4.0" type="device" target-level="7">
     <hal format="hidl">
         <name>android.hardware.audio</name>
         <transport>hwbinder</transport>
@@ -38,11 +38,6 @@
         <name>android.hardware.graphics.mapper</name>
         <transport arch="32+64">passthrough</transport>
         <fqname>@4.0::IMapper/default</fqname>
-    </hal>
-    <hal format="hidl">
-        <name>android.hardware.ir</name>
-        <transport>hwbinder</transport>
-        <fqname>@1.0::IConsumerIr/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.keymaster</name>
@@ -102,11 +97,6 @@
         <transport>hwbinder</transport>
         <fqname>@1.0::IThermal/default</fqname>
         <fqname>@2.0::IThermal/default</fqname>
-    </hal>
-    <hal format="hidl">
-        <name>android.hardware.vibrator</name>
-        <transport>hwbinder</transport>
-        <fqname>@1.0::IVibrator/default</fqname>
     </hal>
     <hal format="hidl">
         <name>vendor.mediatek.hardware.apmonitor</name>

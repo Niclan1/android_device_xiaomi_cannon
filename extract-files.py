@@ -5,6 +5,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+from pathlib import Path
+from pq_elf_phdr import repair as repair_phdr
+from extract_utils.tools import DEFAULT_PATCHELF_VERSION, patchelf_version_path_map
+from extract_utils.utils import run_cmd
+
 from extract_utils.fixups_blob import (
     blob_fixup,
     blob_fixups_user_type,
@@ -31,11 +36,46 @@ namespace_imports = [
 ]
 
 lib_fixups: lib_fixups_user_type = {
+    'libformatter': lambda lib, partition: 'libformatter-cannon' if partition == 'vendor' else lib,
+    'libmnl': lambda lib, partition: 'libmnl-cannon' if partition == 'vendor' else lib,
     libs_clang_rt_ubsan: lib_fixup_remove_arch_suffix,
     libs_proto_3_9_1: lib_fixup_vendorcompat,
 }
 
+def pq_tinyxml_abi_fixup(ctx, file, file_path, *args, **kwargs):
+    # Pin the device's 4KiB layout, then restore PT_PHDR's actual mapped address.
+    # patchelf 0.17/0.18 can retain a stale virtual bias after moving this table.
+    run_cmd([
+        patchelf_version_path_map[DEFAULT_PATCHELF_VERSION],
+        '--page-size', '4096',
+        '--replace-needed', 'libtinyxml2.so', 'libtinyxml2-v34.so',
+        file_path,
+    ])
+    path = Path(file_path)
+    fixed, _ = repair_phdr(path.read_bytes())
+    path.write_bytes(fixed)
+
+
 blob_fixups: blob_fixups_user_type = {
+
+    (
+        'vendor/lib/libpkm.so',
+        'vendor/lib64/libpkm.so',
+    ): blob_fixup().add_needed('libshim_cannon_pcap.so'),
+
+
+    (
+        'system/lib/libaudio_param_parser-sys.so',
+        'system/lib64/libaudio_param_parser-sys.so',
+        'system/lib64/libem_audio_jni.so',
+    ): blob_fixup().replace_needed('libaudioclient.so', 'libaudiobase.so'),
+
+
+    (
+        'system_ext/lib/libaudiotoolkit.so',
+        'system_ext/lib64/libaudiotoolkit.so',
+    ): blob_fixup().replace_needed('libaudioclient.so', 'libaudiobase.so'),
+
 
     'system/priv-app/ImsService/ImsService.apk': blob_fixup()
         .apktool_patch('blob-patches/ImsService'),
@@ -66,10 +106,17 @@ blob_fixups: blob_fixups_user_type = {
         'vendor/bin/hw/camerahalserver',
         'vendor/lib64/libmtkcam_stdutils.so',
         'vendor/lib64/hw/android.hardware.camera.provider@2.6-impl-mediatek.so',
+    ): blob_fixup()
+        .replace_needed('libutils.so', 'libutils-v32.so'),
+
+    # Legacy PQ allocates the VNDK34-sized XMLDocument (776 bytes).
+    # Keep the uniquely named maintained ABI, as other MediaTek Lineage devices do.
+    (
         'vendor/lib/hw/vendor.mediatek.hardware.pq@2.13-impl.so',
         'vendor/lib64/hw/vendor.mediatek.hardware.pq@2.13-impl.so',
     ): blob_fixup()
-        .replace_needed('libutils.so', 'libutils-v32.so'),
+        .replace_needed('libutils.so', 'libutils-v32.so')
+        .call(pq_tinyxml_abi_fixup),
 
     (
         'vendor/bin/mnld',

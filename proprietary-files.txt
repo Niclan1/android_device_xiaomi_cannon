@@ -193,8 +193,8 @@ vendor/lib/libbluetooth_mtk_pure.so
 vendor/lib/libbluetooth_relayer.so
 vendor/lib/libbluetoothem_mtk.so
 vendor/lib/libbt-vendor.so
-vendor/lib/vendor.mediatek.hardware.bluetooth.audio@2.1.so
-vendor/lib/vendor.mediatek.hardware.bluetooth.audio@2.2.so
+vendor/lib/vendor.mediatek.hardware.bluetooth.audio@2.1.so;EXTRACT_ONLY
+vendor/lib/vendor.mediatek.hardware.bluetooth.audio@2.2.so;EXTRACT_ONLY
 vendor/lib64/hw/android.hardware.bluetooth@1.1-impl-mediatek.so
 vendor/lib64/hw/vendor.mediatek.hardware.bluetooth.audio@2.1-impl.so
 vendor/lib64/hw/vendor.mediatek.hardware.bluetooth.audio@2.2-impl.so
@@ -205,8 +205,8 @@ vendor/lib64/libbluetooth_mtk_pure.so
 vendor/lib64/libbluetooth_relayer.so
 vendor/lib64/libbluetoothem_mtk.so
 vendor/lib64/libbt-vendor.so
-vendor/lib64/vendor.mediatek.hardware.bluetooth.audio@2.1.so
-vendor/lib64/vendor.mediatek.hardware.bluetooth.audio@2.2.so
+vendor/lib64/vendor.mediatek.hardware.bluetooth.audio@2.1.so;EXTRACT_ONLY
+vendor/lib64/vendor.mediatek.hardware.bluetooth.audio@2.2.so;EXTRACT_ONLY
 
 # Camera
 vendor/bin/hw/camerahalserver
@@ -1012,7 +1012,7 @@ vendor/lib/libOpenCL.so
 vendor/lib/libadpcmdec_mtk.so
 vendor/lib/libalacdec_mtk.so
 vendor/lib/libbwc.so
-vendor/lib/libformatter.so
+vendor/lib/libformatter.so;MODULE=libformatter-cannon
 vendor/lib/libgz_gp_client.so
 vendor/lib/libgz_uree.so
 vendor/lib/libh264dec_customize.so
@@ -1060,7 +1060,7 @@ vendor/lib64/libcodec2_soft_mtk_mp3dec.so
 vendor/lib64/libcodec2_soft_mtk_msadpcmdec.so
 vendor/lib64/libcodec2_vpp_qt_plugin.so
 vendor/lib64/libcodec2_vpp_rs_plugin.so
-vendor/lib64/libformatter.so
+vendor/lib64/libformatter.so;MODULE=libformatter-cannon
 vendor/lib64/libsfplugin_ccodec_utils.so:vendor/lib64/libsfplugin_ccodec_utils-v31.so;FIX_SONAME
 vendor/lib64/libgz_gp_client.so
 vendor/lib64/libgz_uree.so
@@ -1103,7 +1103,7 @@ vendor/lib64/secure_element-impl.so
 
 # NFC
 vendor/bin/hw/vendor.nxp.hardware.nfc@1.2-service
--vendor/framework/com.nxp.sems.jar
+-vendor/framework/com.nxp.sems.jar;MODULE_SUFFIX=-cannon
 vendor/lib/jcos_client.so
 vendor/lib/libsn100u_fw.so
 vendor/lib/ls_client.so
@@ -1227,8 +1227,8 @@ vendor/lib64/libtranslator_utils.so
 vendor/lib64/libtrm.so
 vendor/lib64/libvia-ril.so
 vendor/lib64/libviamipc-ril.so
-vendor/lib64/vendor.mediatek.hardware.mtkradioex@2.0.so
-vendor/lib64/vendor.mediatek.hardware.mtkradioex@3.0.so
+vendor/lib64/vendor.mediatek.hardware.mtkradioex@2.0.so;EXTRACT_ONLY
+vendor/lib64/vendor.mediatek.hardware.mtkradioex@3.0.so;EXTRACT_ONLY
 
 # Radio (IMS)
 system/bin/vtservice
@@ -1321,8 +1321,6 @@ vendor/etc/.tp/thermal.conf
 vendor/etc/.tp/thermal.off.conf
 
 # Vibrator
-vendor/bin/hw/android.hardware.vibrator@1.0-service-mediatek
-vendor/etc/init/android.hardware.vibrator@1.0-service-mediatek.rc
 vendor/lib64/hw/vibrator.mt6853.so
 
 # Wi-Fi
@@ -1394,7 +1392,7 @@ vendor/lib64/hw/android.hardware.gnss@2.1-impl-mediatek.so
 vendor/lib64/lbs_hidl_service-impl.so
 vendor/lib64/libDR.so
 vendor/lib64/libapmonitor_vendor.so
-vendor/lib64/libmnl.so
+vendor/lib64/libmnl.so;MODULE=libmnl-cannon
 vendor/lib64/vendor.mediatek.hardware.apmonitor@2.0.so
 
 # GPS configs
@@ -1469,15 +1467,15 @@ vendor/lib64/vendor.mediatek.hardware.engineermode@1.2.so
 vendor/lib64/vendor.mediatek.hardware.engineermode@1.3.so
 
 # Mediatek
--system/framework/mediatek-common.jar
+-system/framework/mediatek-common.jar;MODULE_SUFFIX=-cannon
 -system/framework/mediatek-framework.jar
 -system/framework/mediatek-ims-base.jar
 -system/framework/mediatek-ims-common.jar
 -system/framework/mediatek-ims-extension-plugin.jar
 -system/framework/mediatek-services.jar
--system/framework/mediatek-telecom-common.jar
+-system/framework/mediatek-telecom-common.jar;MODULE_SUFFIX=-cannon
 -system/framework/mediatek-telephony-base.jar
--system/framework/mediatek-telephony-common.jar
+-system/framework/mediatek-telephony-common.jar;MODULE_SUFFIX=-cannon
 vendor/bin/hw/vendor.mediatek.hardware.mms@1.6-service
 vendor/bin/dconfig
 vendor/bin/dexecutor
@@ -1497,7 +1495,7 @@ vendor/lib/vendor.mediatek.hardware.mms@1.3.so
 vendor/lib/vendor.mediatek.hardware.mms@1.4.so
 vendor/lib/vendor.mediatek.hardware.mms@1.5.so
 vendor/lib/vendor.mediatek.hardware.mms@1.6.so
-vendor/lib/vendor.mediatek.hardware.netdagent@1.0.so
+vendor/lib/vendor.mediatek.hardware.netdagent@1.0.so;EXTRACT_ONLY
 vendor/lib/vendor.mediatek.hardware.rcs@2.0.so
 vendor/lib64/hw/vendor.mediatek.hardware.mms@1.6-impl.so
 vendor/lib64/libmtkares.so
@@ -1514,8 +1512,8 @@ vendor/lib64/vendor.mediatek.hardware.clientapi@1.0.so
 vendor/lib64/vendor.mediatek.hardware.dmc@1.0.so
 vendor/lib64/vendor.mediatek.hardware.dmc@1.1.so
 vendor/lib64/vendor.mediatek.hardware.dmc@1.2.so
-vendor/lib64/vendor.mediatek.hardware.lbs@1.0.so
-vendor/lib64/vendor.mediatek.hardware.log@1.0.so
+vendor/lib64/vendor.mediatek.hardware.lbs@1.0.so;EXTRACT_ONLY
+vendor/lib64/vendor.mediatek.hardware.log@1.0.so;EXTRACT_ONLY
 vendor/lib64/vendor.mediatek.hardware.mdmonitor@1.0.so
 vendor/lib64/vendor.mediatek.hardware.mms@1.0.so
 vendor/lib64/vendor.mediatek.hardware.mms@1.1.so
@@ -1524,4 +1522,4 @@ vendor/lib64/vendor.mediatek.hardware.mms@1.3.so
 vendor/lib64/vendor.mediatek.hardware.mms@1.4.so
 vendor/lib64/vendor.mediatek.hardware.mms@1.5.so
 vendor/lib64/vendor.mediatek.hardware.mms@1.6.so
-vendor/lib64/vendor.mediatek.hardware.netdagent@1.0.so
+vendor/lib64/vendor.mediatek.hardware.netdagent@1.0.so;EXTRACT_ONLY

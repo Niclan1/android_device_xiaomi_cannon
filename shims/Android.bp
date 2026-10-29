@@ -9,3 +9,18 @@ cc_library_shared {
     system_ext_specific: true,
     compile_multilib: "both",
 }
+
+// libpkm embeds the libpcap 1.8.1 three-argument enumeration caller.
+cc_library_shared {
+    name: "libshim_cannon_pcap",
+    srcs: ["pcap_legacy.c"],
+    shared_libs: ["libpcap"],
+    cflags: ["-Wall", "-Wextra", "-Werror"],
+    multilib: {
+        lib32: { cflags: ["-DSIZEOF_TIME_T=4"] },
+        lib64: { cflags: ["-DSIZEOF_TIME_T=8"] },
+    },
+    stl: "none",
+    vendor: true,
+    compile_multilib: "both",
+}

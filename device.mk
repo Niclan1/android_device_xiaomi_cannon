@@ -129,18 +129,16 @@ PRODUCT_PACKAGES += \
 
 # ConsumerIr
 PRODUCT_PACKAGES += \
-    android.hardware.ir@1.0-impl:64 \
-    android.hardware.ir@1.0-service
-
-# ConfigStore
-PRODUCT_PACKAGES += \
-    disable_configstore
+    android.hardware.ir-service.example
 
 # Display
+# MT6853 exposes legacy ION; use the maintained Lineage compatibility path.
+$(call soong_config_set_bool,libion,legacy_impl,true)
+
 PRODUCT_PACKAGES += \
     android.hardware.graphics.composer@2.1-service \
-    android.hardware.memtrack-service.mediatek-mali \
-    android.hardware.graphics.common-V1-ndk_platform.vendor
+    android.hardware.memtrack-service.mediatek \
+    android.hardware.graphics.common-V1-ndk.vendor
 
 PRODUCT_PACKAGES += \
     libfmq \
@@ -223,7 +221,7 @@ PRODUCT_PACKAGES += \
 
 # Vibrator
 PRODUCT_PACKAGES += \
-    android.hardware.vibrator@1.0-impl:64
+    android.hardware.vibrator-service.mediatek
 
 # CAS
 PRODUCT_PACKAGES += \
@@ -270,14 +268,20 @@ PRODUCT_ENFORCE_RRO_TARGETS := *
 
 # Mediatek
 PRODUCT_BOOT_JARS += \
-    mediatek-common \
+    mediatek-common-cannon \
     mediatek-framework \
     mediatek-services \
-    mediatek-telecom-common \
-    mediatek-telephony-common \
+    mediatek-telecom-common-cannon \
+    mediatek-telephony-common-cannon \
     mediatek-telephony-base \
     mediatek-ims-common \
     mediatek-ims-base
+
+# Match bootclasspath module names to the installed prebuilt JAR stems.
+PRODUCT_CONFIGURED_JAR_LOCATION_OVERRIDES += \
+    platform:mediatek-common-cannon:platform:mediatek-common \
+    platform:mediatek-telecom-common-cannon:platform:mediatek-telecom-common \
+    platform:mediatek-telephony-common-cannon:platform:mediatek-telephony-common
 
 # Power
 PRODUCT_PACKAGES += \
@@ -314,6 +318,8 @@ PRODUCT_PACKAGES += \
     android.hardware.radio-V1.4-java
 
 # IMS
+$(call inherit-product, hardware/lineage/compat/frameworks/compat.mk)
+
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/permissions/privapp-permissions-mediatek.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/privapp-permissions-mediatek.xml
 
@@ -356,7 +362,7 @@ PRODUCT_COPY_FILES += \
 
 PRODUCT_PACKAGES += \
     android.hardware.gnss@2.1.vendor \
-    android.hardware.gnss-V1-ndk_platform.vendor
+    android.hardware.gnss-V1-ndk.vendor
 
 # Public libraries
 PRODUCT_COPY_FILES += \
@@ -369,7 +375,7 @@ PRODUCT_PACKAGES += \
     init.connectivity.rc \
     init.modem.rc \
     init.mt6853.rc \
-    init.mt6853.usb.rc \
+    init.mt6853.usb.cannon.rc \
     init.project.rc \
     init.sensor_2_0.rc \
     ueventd.mtk.rc
@@ -435,6 +441,9 @@ PRODUCT_PACKAGES += \
     android.hardware.tetheroffload.control@1.1.vendor
 
 # Wi-Fi
+# Match the pre-Android 14 QPR2 function-table ABI exported by the vendor HAL.
+$(call soong_config_set_bool,mediatek_wifi_hal,use_pre_u_qpr2_struct,true)
+
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/wifi/p2p_supplicant_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/p2p_supplicant_overlay.conf \
     $(LOCAL_PATH)/configs/wifi/wpa_supplicant.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/wpa_supplicant.conf \
@@ -455,6 +464,7 @@ PRODUCT_SOONG_NAMESPACES += \
     $(LOCAL_PATH) \
     hardware/google/interfaces \
     hardware/google/pixel \
+    hardware/google/pixel/power-libperfmgr \
     hardware/lineage/interfaces/power-libperfmgr \
     hardware/mediatek/libmtkperf_client \
     hardware/mediatek \

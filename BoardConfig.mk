@@ -56,6 +56,12 @@ BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --dtb $(BOARD_PREBUILT_DTBIMAGE)
 TARGET_KERNEL_CONFIG := cannon_defconfig
 TARGET_KERNEL_SOURCE := kernel/xiaomi/cannon
+# Legacy 4.14 compat-vDSO requires explicit GNU tool prefixes.
+# Host tool packages/versions are pinned in source-lock; no kernel-version spoof.
+TARGET_KERNEL_ADDITIONAL_FLAGS += \
+    CROSS_COMPILE=/usr/bin/aarch64-linux-gnu- \
+    CROSS_COMPILE_ARM32=/usr/bin/arm-linux-gnueabi- \
+    CROSS_COMPILE_COMPAT=/usr/bin/arm-linux-gnueabi-
 
 # Partitions
 BOARD_FLASH_BLOCK_SIZE := 131072 # (BOARD_KERNEL_PAGESIZE * 64)
@@ -115,6 +121,7 @@ TARGET_RECOVERY_UI_BLANK_UNBLANK_ON_INIT := true
 TARGET_RECOVERY_UI_MARGIN_HEIGHT := 60
 
 # Sepolicy
+include device/lineage/sepolicy/libion/sepolicy.mk
 include device/mediatek/sepolicy_vndr/SEPolicy.mk
 BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/private
@@ -169,3 +176,6 @@ WIFI_HIDL_FEATURE_DUAL_INTERFACE := true
 
 # Inherit the proprietary files
 include vendor/xiaomi/cannon/BoardConfigVendor.mk
+
+# Retain cannon musb-hdrc/rndis initialization instead of the generic gadget rc.
+$(call soong_config_set,mediatek_gadget,use_custom_usb_gadget_rc,true)

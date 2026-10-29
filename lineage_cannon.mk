@@ -17,11 +17,13 @@ $(call inherit-product, device/xiaomi/cannon/device.mk)
 PRODUCT_DEVICE := cannon
 PRODUCT_NAME := lineage_cannon
 PRODUCT_BRAND := Redmi
-PRODUCT_MODEL := M2007J22C
+# This diagnostic candidate targets the enrolled GL board. Keep the shared build target.
+PRODUCT_MODEL := M2007J22G
+PRODUCT_SYSTEM_DEVICE := cannong
+# CCCI modem RPC reads the vendor device identity; do not substitute a stock fingerprint.
+PRODUCT_BUILD_PROP_OVERRIDES += DeviceName=cannong
 PRODUCT_MANUFACTURER := Xiaomi
 
 PRODUCT_GMS_CLIENTID_BASE := android-xiaomi
 
-PRODUCT_BUILD_PROP_OVERRIDES += \
-    BuildDesc="cannong-user 12 SP1A.210812.016 V14.0.4.0.SJEMIXM release-keys"
-	BuildFingerprint=Redmi/cannong_global/cannong:12/SP1A.210812.016/V14.0.4.0.SJEMIXM:user/release-keys
+# Build descriptions and fingerprints come from this actual Android17 build.

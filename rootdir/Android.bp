@@ -27,7 +27,8 @@ prebuilt_etc {
 }
 
 prebuilt_etc {
-    name: "init.mt6853.usb.rc",
+    name: "init.mt6853.usb.cannon.rc",
+    filename: "init.mt6853.usb.rc",
     src: "etc/init.mt6853.usb.rc",
     sub_dir: "init/hw",
     vendor: true,
