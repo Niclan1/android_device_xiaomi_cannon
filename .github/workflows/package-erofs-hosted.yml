@@ -1,0 +1,87 @@
+name: Package unrooted EROFS ROM (hosted Ubuntu)
+
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cannong-erofs-hosted-package
+  cancel-in-progress: false
+
+jobs:
+  package:
+    if: github.actor == 'Niclan1' && github.repository == 'Niclan1/android_device_xiaomi_cannon'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out reviewed packaging source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prepare standard runner dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "${JAVA_HOME_17_X64}/bin/java"
+          "${JAVA_HOME_17_X64}/bin/java" -version
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends brotli
+          python3 -m unittest discover -s release/gh-ci/tests -p 'test_*.py'
+
+      - name: Validate inputs and package full EROFS OTA
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 release/gh-ci/pack_erofs.py \
+            --work-dir "${RUNNER_TEMP}/cannong-erofs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --java "${JAVA_HOME_17_X64}/bin/java"
+
+      - name: Publish physically untested prerelease assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_DIR: ${{ steps.package.outputs.artifact_dir }}
+          ZIP_SHA256: ${{ steps.package.outputs.sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="erofs-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          notes="${RUNNER_TEMP}/cannong-erofs-release-notes.md"
+          cat > "$notes" <<'EOF'
+          Experimental full LineageOS 24 / Android 17 package for the global Redmi Note 9T (cannong).
+
+          Reuses the pinned vanilla ROM and the compiled, unrooted EROFS kernel image set.
+          This workflow does not compile Android or the kernel from source.
+          Original OS entries, metadata, AVB signatures/descriptors, reconstructed filesystem images,
+          new raw-image readback assertions and the Android whole-file signature are validated.
+          The retained DTBO descriptor is inherited from the pinned base; its raw payload is not shipped or rewritten.
+
+          THIS EXACT ZIP HAS NOT BEEN PHYSICALLY INSTALLED OR HARDWARE-TESTED.
+          No Magisk, Google apps, personal data, Recovery image or userdata-format operation is added.
+          Public AOSP development test keys are used; this is not OEM certification.
+          Keep the existing vanilla package and follow the device-specific installation/rollback guide.
+          See validation.json and the SHA256 sidecar for the exact checks and source correspondence.
+          EOF
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "cannong EROFS packaging candidate ${GITHUB_RUN_ID}" \
+            --draft --prerelease --latest=false --notes-file "$notes"
+          gh release upload "$tag" "$ARTIFACT_DIR"/* --repo "$GITHUB_REPOSITORY"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" > "${RUNNER_TEMP}/cannong-erofs-server-assets.json"
+          python3 - "${RUNNER_TEMP}/cannong-erofs-server-assets.json" <<'PY'
+          import json, os, pathlib, sys
+          sys.path.insert(0, 'release/gh-ci')
+          from pack_erofs import verify_uploaded_assets
+          verify_uploaded_assets(pathlib.Path(os.environ['ARTIFACT_DIR']), json.load(open(sys.argv[1])))
+          print('Exact server asset names/sizes/full SHA256 digests verified; publishing prerelease')
+          PY
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease --latest=false
+          {
+            echo "### Experimental EROFS package"
+            echo "Release: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}"
+            echo "SHA256: \`${ZIP_SHA256}\`"
+            echo "Exact ZIP: physically untested; prerelease, never automatically promoted to latest."
+          } >> "$GITHUB_STEP_SUMMARY"

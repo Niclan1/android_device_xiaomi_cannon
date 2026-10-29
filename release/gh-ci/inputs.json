@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "repository": "Niclan1/android_device_xiaomi_cannon",
+  "seed_tag": "build-inputs-20261029-v3",
+  "source_kernel_revision": "9b1c084c00cf9a82964387db268bfeceba803b96",
+  "source_kernel_tree": "96c85a2278f961260b930d185f631ce67fd358c1",
+  "assets": {
+    "base_rom": {
+      "filename": "lineage-24.0-20261029-UNOFFICIAL-cannong.zip",
+      "bytes": 1259870437,
+      "sha256": "fb6022836171f691b8842a58301209c75e195f177bd535741135dd17a685f8dd"
+    },
+    "erofs_inputs": {
+      "filename": "ci-erofs-inputs.zip",
+      "url": "https://github.com/Niclan1/android_device_xiaomi_cannon/releases/download/build-inputs-20261029-v3/ci-erofs-inputs.zip",
+      "bytes": 17051081,
+      "sha256": "088502305a712396e667b49b156240b70479b94daecf8fe5d2e4a8067af128e9"
+    },
+    "signing_toolkit": {
+      "filename": "cannong-public-signing-toolkit-v1.zip",
+      "url": "https://github.com/Niclan1/android_device_xiaomi_cannon/releases/download/build-inputs-20261029-v3/cannong-public-signing-toolkit-v1.zip",
+      "bytes": 4368487,
+      "sha256": "72494d2120757ef9e62524f2158dba87826d8a54950bab1ea59082a740abfedb"
+    }
+  },
+  "avbtool": {
+    "path": "vendor/avbtool.py",
+    "sha256": "aa080bb3dd613cbbcaea410a8cff62225811fc79a4af05613a63ec3acec7ab92",
+    "repository": "https://android.googlesource.com/platform/external/avb",
+    "revision": "cb5eae91a6b83e1394882decbf6de133239107e1",
+    "license": "vendor/AVB_LICENSE.txt"
+  },
+  "base_parts_manifest": {
+    "filename": "ci-base-parts-manifest.json",
+    "url": "https://github.com/Niclan1/android_device_xiaomi_cannon/releases/download/build-inputs-20261029-v3/ci-base-parts-manifest.json",
+    "bytes": 4019,
+    "sha256": "2063ada3b7aa2609478a890698d1ea60829129df5bcc091581657ea64b61a4a6"
+  }
+}
