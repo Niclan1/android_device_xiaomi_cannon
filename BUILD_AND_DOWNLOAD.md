@@ -6,10 +6,10 @@ or account data. Other variants are not covered by this device's evidence.
 
 ## Download
 
-- **[Full unrooted EROFS ROM ZIP](https://github.com/Niclan1/android_device_xiaomi_cannon/releases/download/erofs-ci-40970158661-1/lineage-24.0-20261029T230227Z-UNOFFICIAL-cannong-EROFS-CI-UNTESTED.zip)**
-  —1259897786bytes. SHA256:
-  `c2d52dfb43b7af664f89776e2dcb032d6e9c46fcff5619a465d3fb1cba3513af`.
-  [Release, checksum and validation report](https://github.com/Niclan1/android_device_xiaomi_cannon/releases/tag/erofs-ci-40970158661-1).
+- **[Full unrooted EROFS ROM ZIP](https://github.com/Niclan1/android_device_xiaomi_cannon/releases/download/lineage24-cannong-ahandler-20261030/lineage-24.0-20261030T095022Z-UNOFFICIAL-cannong-EROFS-AHandler-UNTESTED.zip)**
+  —1261040651bytes. SHA256:
+  `8ee87a25843814d347ca0f6233d247d10c2549f0c79684b4533914f5086b4101`.
+  [Release, checksum and validation report](https://github.com/Niclan1/android_device_xiaomi_cannon/releases/tag/lineage24-cannong-ahandler-20261030).
 - **[Raw Android17 Recovery image](https://github.com/Niclan1/android_device_xiaomi_cannon/releases/download/recovery-android17-cannong-20261029/recovery.img)**
   —134217728bytes. SHA256:
   `321edf16505aefdde71ef90382fa611b814aab68836bc041e13f3edcce5ce952`.
@@ -20,15 +20,21 @@ not a flashable Android ROM. Check the complete SHA256 after downloading:
 
 ```powershell
 Get-FileHash -Algorithm SHA256 -LiteralPath '.\recovery.img'
-Get-FileHash -Algorithm SHA256 -LiteralPath '.\lineage-24.0-20261029T230227Z-UNOFFICIAL-cannong-EROFS-CI-UNTESTED.zip'
+Get-FileHash -Algorithm SHA256 -LiteralPath '.\lineage-24.0-20261030T095022Z-UNOFFICIAL-cannong-EROFS-AHandler-UNTESTED.zip'
 ```
 
-The hosted [run40970158661](https://github.com/Niclan1/android_device_xiaomi_cannon/actions/runs/40970158661)
-completed automatically, including release upload and full server SHA256 checks,
-in117seconds. It reuses pinned compiled OS/kernel images and repackages/signs
-the full OTA; **it does not compile Android/kernel source**. Signatures, AVB,
-four reconstructed filesystems and unchanged-entry checks passed. This exact
-resulting ROM ZIP has **not been physically installed or hardware-tested**.
+This2026-10-30 package contains the all-consumer AHandler repair. The same
+four userspace images passed bounded owner checks (call, web, camera/video,
+brightness/wake and WhatsApp) on the personal rooted kernel188 installation;
+the VT service's repeated idle CPU loop dropped from about100% to0% in the
+observed windows, including after a functional call. This is not full acceptance.
+The **exact clean ZIP has not been physically installed**. Whole-file signature,
+four filesystem reconstructions, raw-image hashes and full AVB chain passed
+host validation. [Validation report](https://github.com/Niclan1/android_device_xiaomi_cannon/releases/download/lineage24-cannong-ahandler-20261030/VALIDATION.json).
+
+The retained unrooted EROFS kernel has matching published source; the package
+contains no Magisk, GApps, personal modules or data. Recovery below is unchanged
+and separately flashed; installing the ROM ZIP does not install Recovery.
 
 ## Install scope
 
@@ -49,7 +55,7 @@ For the ROM, enter compatible Lineage Recovery, select **Apply update → Apply
 from ADB**, and run:
 
 ```sh
-adb sideload lineage-24.0-20261029T230227Z-UNOFFICIAL-cannong-EROFS-CI-UNTESTED.zip
+adb sideload lineage-24.0-20261030T095022Z-UNOFFICIAL-cannong-EROFS-AHandler-UNTESTED.zip
 ```
 
 Wait for actual Recovery installation success. The complete matched OTA writes
@@ -69,9 +75,13 @@ hardware/app/endurance, encrypted-data decryption, Play certification/Integrity
 and Wallet acceptance remain incomplete. Compilation or quiet logs are not
 functional proof. Recovery is not presented as hardened against root/raw writes.
 
-## Reproduce the hosted package
+## Existing hosted packaging workflow (older seed)
 
-The maintainer can open
+**The existing workflow still packages its earlier seed and does not include this
+AHandler repair.** This new release was built locally from the fresh userspace
+cohort. No runner/server migration or workflow dispatch was changed.
+
+For the older package, the maintainer can open
 [Actions → Package unrooted EROFS ROM](https://github.com/Niclan1/android_device_xiaomi_cannon/actions/workflows/package-erofs-hosted.yml)
 and choose **Run workflow**, branch`lineage-22.2`. The workflow is manual and
 restricted to ownerNiclan1. It verifies the public seed hashes, signs/revalidates
@@ -84,6 +94,11 @@ Fresh source-built images and any future full ROM build require their own
 artifact and hardware validation before replacing a tested cohort.
 
 ## Sources and thanks
+
+**Required14th component for this release:** [matching frameworks/av source,
+exact bundle/patch and build supplement](https://github.com/Niclan1/android_device_xiaomi_cannon/blob/lineage-22.2/release/ahandler-20261030/SOURCE.md).
+The previous13-tree manifest alone does not contain the AHandler fix.
+
 
 [Pinned source manifest](https://github.com/Niclan1/android_device_xiaomi_cannon/blob/release-manifest/default.xml) ·
 [Source/build guide](https://github.com/Niclan1/android_device_xiaomi_cannon/blob/release-manifest/SOURCE_BUILD.md) ·

@@ -1,0 +1,331 @@
+From 3d2fa5702bbbbffc4c73ed2a222fbf0ccc6decb6 Mon Sep 17 00:00:00 2001
+From: Niclan1 <Niclan1@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 06:44:36 +0200
+Subject: [PATCH] media: preserve legacy AHandler layout with synchronized
+ delivery state
+
+Older MediaTek subclasses allocate the Android12 AHandler prefix. New inline
+fields overlap their own members and can spin in a bogus pthread mutex.
+Restore the original counter/vector layout, and retain delivery status and
+64-bit accounting in mutex-protected external state keyed by weak identity.
+Keep callbacks outside locks and serialize roster statistics with delivery.
+
+Preserves the AOSP legacy object ABI and current diagnostic semantics.
+Validated actual ARM32/ARM64 layouts, full CFI library compilation/link,
+and ARM64 old/new handler, reentrancy, concurrency and lifetime tests.
+All production header consumers must be rebuilt together before deployment.
+
+Change-Id: I06fdca959a4581c1297e2a2ab5cc245f0539fe20
+---
+ media/module/foundation/AHandler.cpp          | 173 +++++++++++++++---
+ media/module/foundation/ALooperRoster.cpp     |  43 +----
+ .../media/stagefright/foundation/AHandler.h   |  15 +-
+ 3 files changed, 159 insertions(+), 72 deletions(-)
+
+diff --git a/media/module/foundation/AHandler.cpp b/media/module/foundation/AHandler.cpp
+index d8b0aaf..86a9d4c 100644
+--- a/media/module/foundation/AHandler.cpp
++++ b/media/module/foundation/AHandler.cpp
+@@ -17,42 +17,173 @@
+ //#define LOG_NDEBUG 0
+ #define LOG_TAG "AHandler"
+ #include <utils/Log.h>
++#include <utils/String8.h>
+ 
+ #include <media/stagefright/foundation/AHandler.h>
+ #include <media/stagefright/foundation/AMessage.h>
+ 
++#include <inttypes.h>
++#include <map>
++#include <memory>
++#include <vector>
++
+ namespace android {
++namespace {
++
++// Older vendor subclasses allocate only the original AHandler prefix. Keep
++// delivery diagnostics out of the object, including the mutex: a new tail
++// would otherwise overwrite a vendor subclass's fields. Weak-reference
++// identity, rather than the object address, also distinguishes address reuse.
++struct DeliveryState {
++    explicit DeliveryState(AHandler* handler) : owner(handler) {}
++
++    const wp<AHandler> owner;
++    Mutex lock;
++    bool delivering = false;
++    uint32_t what = 0;
++    int64_t startUs = 0;
++    uint64_t messageCounter = 0;
++};
++
++using StatePtr = std::shared_ptr<DeliveryState>;
++
++struct DeliveryStates {
++    Mutex lock;
++    std::map<RefBase::weakref_type*, StatePtr> entries;
++    size_t additions = 0;
++};
++
++static DeliveryStates& deliveryStates() {
++    // Process lifetime avoids destruction-order dependencies with global
++    // handlers and loopers. Expired per-handler entries are reclaimed below.
++    static DeliveryStates* states = new DeliveryStates;
++    return *states;
++}
+ 
+-void AHandler::deliverMessage(const sp<AMessage> &msg) {
+-    setDeliveryStatus(true, msg->what(), ALooper::GetNowUs());
++static StatePtr deliveryStateFor(AHandler* handler) {
++    DeliveryStates& states = deliveryStates();
++    StatePtr result;
++    std::vector<StatePtr> candidates;
++    {
++        AutoMutex lock(states.lock);
++        auto found = states.entries.find(handler->getWeakRefs());
++        if (found != states.entries.end()) {
++            return found->second;
++        }
++        result = std::make_shared<DeliveryState>(handler);
++        states.entries.emplace(handler->getWeakRefs(), result);
++        // Legacy inline destructors cannot call a new cleanup hook. Sweep
++        // periodically without retaining a strong reference to any handler.
++        if (++states.additions % 64 == 0) {
++            candidates.reserve(states.entries.size());
++            for (const auto& entry : states.entries) {
++                candidates.push_back(entry.second);
++            }
++        }
++    }
++    for (const StatePtr& candidate : candidates) {
++        // Both promotion and release occur outside the registry lock: a
++        // last-reference callback is permitted to interact with other handlers.
++        if (candidate->owner.promote() != nullptr) {
++            continue;
++        }
++        AutoMutex lock(states.lock);
++        auto found = states.entries.find(candidate->owner.get_refs());
++        if (found != states.entries.end() && found->second == candidate) {
++            // The candidates vector keeps the state (and its weak reference)
++            // alive until after this registry lock has been released.
++            states.entries.erase(found);
++        }
++    }
++    return result;
++}
++
++static void makeFourCC(uint32_t fourcc, char* s, size_t bufsz) {
++    s[0] = (fourcc >> 24) & 0xff;
++    if (s[0]) {
++        s[1] = (fourcc >> 16) & 0xff;
++        s[2] = (fourcc >> 8) & 0xff;
++        s[3] = fourcc & 0xff;
++        s[4] = 0;
++    } else {
++        snprintf(s, bufsz, "%u", fourcc);
++    }
++}
++
++}  // namespace
++
++void AHandler::deliverMessage(const sp<AMessage>& msg) {
++    const StatePtr state = deliveryStateFor(this);
++    {
++        AutoMutex lock(state->lock);
++        state->delivering = true;
++        state->what = msg->what();
++        state->startUs = ALooper::GetNowUs();
++    }
++
++    // A callback can post messages or request a roster dump. No registry or
++    // diagnostic mutex may be held across vendor/framework callbacks.
+     onMessageReceived(msg);
+-    mMessageCounter++;
+-    setDeliveryStatus(false, 0, 0);
+-
+-    if (mVerboseStats) {
+-        uint32_t what = msg->what();
+-        ssize_t idx = mMessages.indexOfKey(what);
+-        if (idx < 0) {
+-            mMessages.add(what, 1);
+-        } else {
+-            mMessages.editValueAt(idx)++;
++
++    {
++        AutoMutex lock(state->lock);
++        ++state->messageCounter;
++        // Preserve the exact legacy 32-bit field and its inline-constructor
++        // layout, while retaining Android's 64-bit diagnostic count externally.
++        mMessageCounter = static_cast<uint32_t>(state->messageCounter);
++        state->delivering = false;
++        state->what = 0;
++        state->startUs = 0;
++        if (mVerboseStats) {
++            const uint32_t what = msg->what();
++            const ssize_t idx = mMessages.indexOfKey(what);
++            if (idx < 0) {
++                mMessages.add(what, 1);
++            } else {
++                mMessages.editValueAt(idx)++;
++            }
+         }
+     }
+ }
+ 
+ void AHandler::setDeliveryStatus(bool delivering, uint32_t what, int64_t startUs) {
+-    AutoMutex autoLock(mLock);
+-    mDeliveringMessage = delivering;
+-    mCurrentMessageWhat = what;
+-    mCurrentMessageStartTimeUs = startUs;
++    const StatePtr state = deliveryStateFor(this);
++    AutoMutex lock(state->lock);
++    state->delivering = delivering;
++    state->what = what;
++    state->startUs = startUs;
+ }
+ 
+ void AHandler::getDeliveryStatus(bool& delivering, uint32_t& what, int64_t& durationUs) {
+-    AutoMutex autoLock(mLock);
+-    delivering = mDeliveringMessage;
+-    what = mCurrentMessageWhat;
+-    durationUs = mCurrentMessageStartTimeUs == 0 ?
+-            0 : ALooper::GetNowUs() - mCurrentMessageStartTimeUs;
++    const StatePtr state = deliveryStateFor(this);
++    AutoMutex lock(state->lock);
++    delivering = state->delivering;
++    what = state->what;
++    durationUs = state->startUs == 0 ? 0 : ALooper::GetNowUs() - state->startUs;
++}
++
++void AHandler::dumpMessageStats(String8& out, bool verbose, bool clear) {
++    const StatePtr state = deliveryStateFor(this);
++    AutoMutex lock(state->lock);
++    mVerboseStats = verbose;
++    const uint64_t durationUs = state->startUs == 0 ? 0 : ALooper::GetNowUs() - state->startUs;
++    out.appendFormat(": %" PRIu64 " messages processed, delivering "
++                     "%d, current msg %" PRIu32 ", current msg durationUs %" PRIu64,
++                     state->messageCounter, state->delivering, state->what, durationUs);
++    if (verbose) {
++        for (size_t i = 0; i < mMessages.size(); ++i) {
++            char fourcc[15];
++            makeFourCC(mMessages.keyAt(i), fourcc, sizeof(fourcc));
++            out.appendFormat("\n    %s: %u", fourcc, mMessages.valueAt(i));
++        }
++    } else {
++        mMessages.clear();
++    }
++    if (clear) {
++        state->messageCounter = 0;
++        mMessageCounter = 0;
++        mMessages.clear();
++    }
+ }
+ 
+ }  // namespace android
+diff --git a/media/module/foundation/ALooperRoster.cpp b/media/module/foundation/ALooperRoster.cpp
+index daa90be..47993c4 100644
+--- a/media/module/foundation/ALooperRoster.cpp
++++ b/media/module/foundation/ALooperRoster.cpp
+@@ -102,18 +102,6 @@ void ALooperRoster::unregisterStaleHandlers() {
+     }
+ }
+ 
+-static void makeFourCC(uint32_t fourcc, char *s, size_t bufsz) {
+-    s[0] = (fourcc >> 24) & 0xff;
+-    if (s[0]) {
+-        s[1] = (fourcc >> 16) & 0xff;
+-        s[2] = (fourcc >> 8) & 0xff;
+-        s[3] = fourcc & 0xff;
+-        s[4] = 0;
+-    } else {
+-        snprintf(s, bufsz, "%u", fourcc);
+-    }
+-}
+-
+ void ALooperRoster::dump(int fd, const Vector<String16>& args) {
+     bool clear = false;
+     bool oldVerbose = verboseStats;
+@@ -143,35 +131,8 @@ void ALooperRoster::dump(int fd, const Vector<String16>& args) {
+             s.append(looper->getName());
+             sp<AHandler> handler = info.mHandler.promote();
+             if (handler != NULL) {
+-                bool deliveringMessages;
+-                uint32_t currentMessageWhat;
+-                int64_t currentDeliveryDurationUs;
+-                handler->getDeliveryStatus(deliveringMessages,
+-                                           currentMessageWhat,
+-                                           currentDeliveryDurationUs);
+-                handler->mVerboseStats = verboseStats;
+-                s.appendFormat(": %" PRIu64 " messages processed, delivering "
+-                               "%d, current msg %" PRIu32 ", current msg "
+-                               "durationUs %" PRIu64 "",
+-                               handler->mMessageCounter,
+-                               deliveringMessages,
+-                               currentMessageWhat,
+-                               currentDeliveryDurationUs);
+-                if (verboseStats) {
+-                    for (size_t j = 0; j < handler->mMessages.size(); j++) {
+-                        char fourcc[15];
+-                        makeFourCC(handler->mMessages.keyAt(j), fourcc, sizeof(fourcc));
+-                        s.appendFormat("\n    %s: %u",
+-                                fourcc,
+-                                handler->mMessages.valueAt(j));
+-                    }
+-                } else {
+-                    handler->mMessages.clear();
+-                }
+-                if (clear || (verboseStats && !oldVerbose)) {
+-                    handler->mMessageCounter = 0;
+-                    handler->mMessages.clear();
+-                }
++                handler->dumpMessageStats(s, verboseStats,
++                                          clear || (verboseStats && !oldVerbose));
+             } else {
+                 s.append(": <stale handler>");
+             }
+diff --git a/media/module/foundation/include/media/stagefright/foundation/AHandler.h b/media/module/foundation/include/media/stagefright/foundation/AHandler.h
+index c9e4f69..ebae261 100644
+--- a/media/module/foundation/include/media/stagefright/foundation/AHandler.h
++++ b/media/module/foundation/include/media/stagefright/foundation/AHandler.h
+@@ -25,15 +25,13 @@
+ namespace android {
+ 
+ struct AMessage;
++class String8;
+ 
+ struct AHandler : public RefBase {
+     AHandler()
+         : mID(0),
+           mVerboseStats(false),
+-          mMessageCounter(0),
+-          mDeliveringMessage(false),
+-          mCurrentMessageWhat(0),
+-          mCurrentMessageStartTimeUs(0){
++          mMessageCounter(0) {
+     }
+ 
+     ALooper::handler_id id() const {
+@@ -69,18 +67,15 @@ private:
+     }
+ 
+     bool mVerboseStats;
+-    uint64_t mMessageCounter;
++    // Keep the original vendor ABI prefix; extended state lives externally.
++    uint32_t mMessageCounter;
+     KeyedVector<uint32_t, uint32_t> mMessages;
+ 
+-    Mutex mLock;
+-    bool mDeliveringMessage;
+-    uint32_t  mCurrentMessageWhat;
+-    int64_t mCurrentMessageStartTimeUs;
+-
+     void deliverMessage(const sp<AMessage> &msg);
+ 
+     void setDeliveryStatus(bool, uint32_t, int64_t);
+     void getDeliveryStatus(bool&, uint32_t&, int64_t&);
++    void dumpMessageStats(String8&, bool verbose, bool clear);
+ 
+ 
+     DISALLOW_EVIL_CONSTRUCTORS(AHandler);
+-- 
+2.43.0
+

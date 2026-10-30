@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "rom": {
+    "name": "lineage-24.0-20261030T095022Z-UNOFFICIAL-cannong-EROFS-AHandler-UNTESTED.zip",
+    "bytes": 1261040651,
+    "sha256": "8ee87a25843814d347ca0f6233d247d10c2549f0c79684b4533914f5086b4101"
+  },
+  "frameworks_av": {
+    "upstream_repository": "https://github.com/LineageOS/android_frameworks_av",
+    "upstream_base": "937eb9047ec2f88620f1f6a4d9e407f6c869d91a",
+    "revision": "3d2fa5702bbbbffc4c73ed2a222fbf0ccc6decb6",
+    "tree": "491e0f48c8294d95813a75a9bc29be7ce14ca2b7",
+    "patch": {
+      "name": "0001-frameworks-av-legacy-AHandler-sidecar.patch",
+      "bytes": 12465,
+      "sha256": "c857b6869a9e7e6a9da3bfac28f9101126ab0d7e1189c9783ccf5a0822af4d0e"
+    },
+    "bundle": {
+      "name": "frameworks-av-AHandler-3d2fa57.bundle",
+      "bytes": 3977,
+      "sha256": "280f85f6ca52de6fea2cf73742e2e31a926592b232845c814a0cecdd6f396a0e",
+      "prerequisite": "937eb9047ec2f88620f1f6a4d9e407f6c869d91a"
+    },
+    "changed_paths": [
+      "media/module/foundation/AHandler.cpp",
+      "media/module/foundation/ALooperRoster.cpp",
+      "media/module/foundation/include/media/stagefright/foundation/AHandler.h"
+    ]
+  },
+  "kernel": {
+    "repository": "https://github.com/Niclan1/android_kernel_xiaomi_cannon",
+    "revision": "9b1c084c00cf9a82964387db268bfeceba803b96",
+    "tree": "96c85a2278f961260b930d185f631ce67fd358c1",
+    "embedded_kernel_sha256": "9189c13c598019399c328c4518a162b1365893200ae55ce1fa26ee022ae01547",
+    "qualification": "Public9b1 source tree matches working development188. The main build kernel4b9 is not embedded."
+  },
+  "userspace_build_revision_inventory": {
+    "device/xiaomi/cannon": "8fa554ca37fccfb7d542a7aaa3178be173505e7e",
+    "system/core": "676e4af772ba9b39ed371e701d875221491ef1e3",
+    "hardware/interfaces": "50a15de252e64f367e470bfaedb3ba17803774ac",
+    "vendor/xiaomi/cannon": "b6eff6ef9b3936d9fb149e1dd39a16304bd1365f",
+    "packages/modules/Connectivity": "162b9a45eaba797ef0fa3aed1329e056905b29f0",
+    "frameworks/base": "0b34e53c69506f609a4495f1a18e2a3c1d2d2256",
+    "frameworks/opt/telephony": "bff53bbb3da4e8fb3b30aab9150ca2c5c5e6e42b",
+    "system/sepolicy": "c4cfa8a5b8cf0b313f61972e8cf1fe5ffc89af00",
+    "build/soong": "264b3649c406df5226610b7913a05d9cb127360b",
+    "hardware/mediatek": "131a3075b55ef5a86a6988de63fc830153aeb91a",
+    "hardware/lineage/compat": "83851ab3ecb09d840098ac32ab28c058d94299ed",
+    "frameworks/av": "3d2fa5702bbbbffc4c73ed2a222fbf0ccc6decb6"
+  },
+  "sources": {
+    "existing_manifest": "https://github.com/Niclan1/android_device_xiaomi_cannon/blob/release-manifest/default.xml",
+    "existing_guide": "https://github.com/Niclan1/android_device_xiaomi_cannon/blob/release-manifest/SOURCE_BUILD.md",
+    "credits": "https://github.com/Niclan1/android_device_xiaomi_cannon/blob/release-manifest/CREDITS.md",
+    "required_supplement": "frameworks/av is an additional14th component. Apply the exact upstream-base/bundle recipe in SOURCE.md; the old13-component manifest alone lacks this fix."
+  },
+  "reproducibility": "Source tree and binary cohort are pinned; timestamp/toolchain/package reproducibility is not claimed bit-for-bit.",
+  "licenses_and_credits": [
+    "AOSP/Android original foundation implementation and retained Apache-2.0 notices",
+    "LineageOS upstream frameworks/av and original history",
+    "LinkBoi and cannon/cannong contributors linked in existing CREDITS.md",
+    "Linux/MediaTek/kernel backport authors retained in corresponding kernel history"
+  ],
+  "personal_modifications_included": false
+}
