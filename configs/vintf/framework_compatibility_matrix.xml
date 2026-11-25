@@ -1,4 +1,5 @@
 <compatibility-matrix version="2.0" type="framework">
+<kernel version="6.18.0" level="7"/>
 <hal format="hidl" optional="true">
     <name>android.hardware.audio.effect</name>
     <version>7.0</version>
@@ -503,6 +504,14 @@
     <version>1.0-1</version>
     <interface>
         <name>INqNfc</name>
+        <instance>default</instance>
+    </interface>
+</hal>
+<hal format="hidl" optional="true">
+    <name>vendor.nxp.nxpnfc</name>
+    <version>1.0</version>
+    <interface>
+        <name>INxpNfc</name>
         <instance>default</instance>
     </interface>
 </hal>

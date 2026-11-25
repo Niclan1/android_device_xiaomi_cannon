@@ -132,7 +132,16 @@ blob_fixups: blob_fixups_user_type = {
         ),
 
     'vendor/lib/hw/audio.primary.mt6853.so': blob_fixup()
-        .replace_needed('libalsautils.so', 'libalsautils-v31.so'),
+        .replace_needed('libalsautils.so', 'libalsautils-v31.so')
+        # no ADSP on this kernel: capture must not pick the DSP handler
+        .binary_regex_replace(b'\x9d\x08\x01\xeb\x00\x00\x50\xe3',
+                              b'\x00\x00\xa0\xe3\x00\x00\x50\xe3')
+        .binary_regex_replace(b'\x8d\x07\x01\xeb\x00\x00\x50\xe3',
+                              b'\x00\x00\xa0\xe3\x00\x00\x50\xe3')
+        .binary_regex_replace(b'\x10\x40\x2d\xe9\x6e\x08\x00\xeb',
+                              b'\x00\x00\xa0\xe3\x1e\xff\x2f\xe1')
+        .binary_regex_replace(b'\x40\x10\x81\xe2\x01\x00\x50\xe1\x0f\x00\x00\x1a',
+                              b'\x40\x10\x81\xe2\x01\x00\x50\xe1\x0f\x00\x00\xea'),
 
     'vendor/etc/vintf/manifest/manifest_media_c2_V1_2_default.xml': blob_fixup()
         .regex_replace('1.1', '1.2'),

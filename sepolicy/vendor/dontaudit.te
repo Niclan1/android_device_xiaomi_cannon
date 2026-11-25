@@ -2,3 +2,20 @@
 # target API level < Q.
 dontaudit untrusted_app ashmem_device:chr_file open;
 dontaudit untrusted_app vendor_mtk_gpu_prop:file read;
+
+# Lookups of unset ro.* properties (MTK libraries probe legacy names)
+dontaudit { mediacodec mtk_hal_camera vendor_init } default_prop:file { getattr map open read };
+
+# sys.use_memfd is a platform property, also set by the system side
+dontaudit vendor_init use_memfd_prop:property_service set;
+
+# init inspects a crashing HAL while it is being restarted
+dontaudit init hal_fingerprint_default:process ptrace;
+
+# devtmpfs: the kernel creates its own copy of device nodes; Android uses the
+# ueventd-populated tmpfs /dev, so these failures are harmless.
+dontaudit kernel device:dir { add_name write };
+dontaudit kernel device:{ chr_file blk_file } { create setattr };
+
+# Codec2 using_ion() and others stat /dev/ion; only the camera HAL may use it
+dontaudit domain mtk_cam_ion_device:chr_file getattr;

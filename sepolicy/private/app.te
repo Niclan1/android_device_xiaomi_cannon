@@ -1,0 +1,12 @@
+# Without policycap memfd_class (and with no /dev/ashmem on mainline kernels)
+# app-created memfds (bitmaps, obfuscated dex, FMQ) are labelled plain tmpfs.
+allow appdomain tmpfs:file { getattr map read write };
+
+# Legacy camera Parcel Blob and MediaMetadataRetrieverClient buffers.
+allow { platform_app radio untrusted_app untrusted_app_34 } cameraserver_tmpfs:file { getattr map read write };
+allow { mediaprovider_app untrusted_app untrusted_app_34 } mediaserver_tmpfs:file { map read write };
+allow untrusted_app_34 mediaextractor_tmpfs:file { map read write };
+
+# Mainline DRM rendering is not available to isolated apps.
+allow { appdomain -isolated_app_all } gpu_device:dir r_dir_perms;
+allow { appdomain -isolated_app_all } gpu_device:chr_file rw_file_perms;

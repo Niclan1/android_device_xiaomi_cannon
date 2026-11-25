@@ -13,6 +13,11 @@ $(call inherit-product, frameworks/native/build/phone-xhdpi-4096-dalvik-heap.mk)
 # Project ID Quota
 $(call inherit-product, $(SRC_TARGET_DIR)/product/emulated_storage.mk)
 
+# Audio (no ADSP on this kernel)
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/configs/audio/AudioParamOptions.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_param/AudioParamOptions.xml \
+    $(LOCAL_PATH)/configs/audio/AudioParamOptions_vext.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_param/AudioParamOptions_vext.xml
+
 # Permissions
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml \
@@ -52,6 +57,12 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.software.ipsec_tunnels.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.ipsec_tunnels.xml \
     frameworks/native/data/etc/android.software.midi.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.midi.xml \
     frameworks/native/data/etc/android.software.sip.voip.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.software.sip.voip.xml
+
+# Telephony off for the "noradio" fallback vendor SKUs (libinit: no CCCI modem
+# in the kernel, or androidboot.cannon.radio=off)
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/configs/permissions/cannon-noradio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/sku_noradio/cannon-noradio.xml \
+    $(LOCAL_PATH)/configs/permissions/cannon-noradio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/sku_mainline_noradio/cannon-noradio.xml
 
 # AAPT
 PRODUCT_AAPT_CONFIG := normal
@@ -140,6 +151,15 @@ PRODUCT_PACKAGES += \
     android.hardware.memtrack-service.mediatek \
     android.hardware.graphics.common-V1-ndk.vendor
 
+# Display (mainline kernels, selected at boot by libinit)
+PRODUCT_PACKAGES += \
+    com.android.hardware.graphics.composer.drm_hwcomposer \
+    com.xiaomi.cannon.gralloc \
+    vulkan.pastel
+
+# Mesa panfrost EGL/GLES, the default GLES driver on mainline kernels
+$(call inherit-product-if-exists, $(LOCAL_PATH)/gfx/gfx.mk)
+
 PRODUCT_PACKAGES += \
     libfmq \
     libdrm.vendor \
@@ -163,11 +183,11 @@ PRODUCT_PACKAGES += \
     android.hardware.drm@1.3.vendor \
     android.hardware.drm@1.4.vendor
 
-# Health
+# Health (AIDL; libhealth_aidl_impl reads /sys/class/power_supply, which both
+# the 4.14 and the mainline mt6853 battery/mt6360 charger drivers provide)
 PRODUCT_PACKAGES += \
-    android.hardware.health@2.1-impl:64 \
-    android.hardware.health@2.1-impl.recovery \
-    android.hardware.health@2.1-service
+    android.hardware.health-service.mediatek \
+    android.hardware.health-service.mediatek-recovery
 
 # Secure Element
 PRODUCT_PACKAGES += \
@@ -193,6 +213,9 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/com.android.nfc_extras.xml:$(TARGET_COPY_OUT_ODM)/etc/permissions/sku_nfc/com.android.nfc_extras.xml \
     frameworks/native/data/etc/com.nxp.mifare.xml:$(TARGET_COPY_OUT_ODM)/etc/permissions/sku_nfc/com.nxp.mifare.xml
 
+PRODUCT_COPY_FILES += \
+    frameworks/native/data/etc/android.hardware.nfc.xml:$(TARGET_COPY_OUT_ODM)/etc/permissions/sku_nfc_mainline/android.hardware.nfc.xml
+
 PRODUCT_PACKAGES += \
     android.hardware.nfc@1.2-service \
     android.hardware.nfc@1.2.vendor \
@@ -204,10 +227,15 @@ PRODUCT_PACKAGES += \
 # Media
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/media/media_codecs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs.xml \
+    $(LOCAL_PATH)/configs/media/media_codecs_sw.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_sw.xml \
+    $(LOCAL_PATH)/configs/media/media_codecs_enc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_enc.xml \
+    $(LOCAL_PATH)/configs/media/media_codecs_mediatek_video_enc_c2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_mediatek_video_enc_c2.xml \
     $(LOCAL_PATH)/configs/media/media_codecs_c2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_c2.xml \
     $(LOCAL_PATH)/configs/media/media_codecs_mediatek_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_mediatek_audio.xml \
     $(LOCAL_PATH)/configs/media/media_codecs_mediatek_video.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_mediatek_video.xml \
+    $(LOCAL_PATH)/configs/media/media_codecs_mediatek_video_c2.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_mediatek_video_c2.xml \
     $(LOCAL_PATH)/configs/media/media_codecs_performance.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_performance.xml \
+    $(LOCAL_PATH)/configs/media/media_codecs_performance_sw.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_performance_sw.xml \
     $(LOCAL_PATH)/configs/media/media_profiles_V1_0.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles_V1_0.xml
 
 PRODUCT_PACKAGES += \
@@ -262,6 +290,7 @@ DEVICE_PACKAGE_OVERLAYS += \
 PRODUCT_PACKAGES += \
     CannonCNSettingsProviderOverlay \
     CannonGLSettingsProviderOverlay \
+    CannonNoRadioOverlay \
     NcmTetheringOverlay
 
 PRODUCT_ENFORCE_RRO_TARGETS := *
@@ -291,7 +320,10 @@ PRODUCT_PACKAGES += \
     libmtkperf_client
 
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/configs/powerhint.json:$(TARGET_COPY_OUT_VENDOR)/etc/powerhint.json
+    $(LOCAL_PATH)/configs/powerhint.json:$(TARGET_COPY_OUT_VENDOR)/etc/powerhint.json \
+    $(LOCAL_PATH)/configs/cgroups.json:$(TARGET_COPY_OUT_VENDOR)/etc/cgroups.json \
+    $(LOCAL_PATH)/configs/task_profiles.json:$(TARGET_COPY_OUT_VENDOR)/etc/task_profiles.json \
+    $(LOCAL_PATH)/rootdir/etc/init.mi_thermald.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.mi_thermald.rc
 
 # Power Off Alarm
 PRODUCT_PACKAGES += \
@@ -372,6 +404,9 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     fstab.mt6853 \
     init.cannon.rc \
+    init.cannon.native.rc \
+    init.cannon.vcodec.rc \
+    init.cannon.gfx.rc \
     init.connectivity.rc \
     init.modem.rc \
     init.mt6853.rc \
@@ -472,3 +507,10 @@ PRODUCT_SOONG_NAMESPACES += \
 
 # Inherit the proprietary files
 $(call inherit-product, vendor/xiaomi/cannon/cannon-vendor.mk)
+
+PRODUCT_PACKAGES += libgralloc_extra
+
+PRODUCT_PACKAGES += \
+    android.hardware.graphics.allocator@4.0-service.cannon \
+    android.hardware.graphics.mapper@4.0-impl.cannon \
+    android.hardware.graphics.mapper@4.0-impl.cannon:32

@@ -14,3 +14,11 @@ allow vendor_init nfc_data_vendor_file:dir { r_dir_perms create_dir_perms };
 allow vendor_init proc_sched_stune:file w_file_perms;
 
 rw_dir_file(vendor_init, sysfs_leds)
+
+# MediaTek telephony defaults from vendor build.prop
+set_prop(vendor_init, vendor_mtk_wfc_serv_prop)
+set_prop(vendor_init, vendor_mtk_telephony_addon_prop)
+
+get_prop(vendor_init, vendor_cannon_gauge_prop)
+# init.cannon.rc camera properties on mainline kernels
+set_prop(vendor_init, vendor_mtk_emcamera_prop)

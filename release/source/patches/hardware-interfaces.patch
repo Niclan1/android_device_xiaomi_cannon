@@ -1,0 +1,72 @@
+diff --git a/health/utils/libhealthloop/filterPowerSupplyEvents.c b/health/utils/libhealthloop/filterPowerSupplyEvents.c
+index 6f295c70983ad9c03d6bad051ada5f9861790a61..a82ba0aa8a03fb757b7969ce4e372f213efce3da 100644
+--- a/health/utils/libhealthloop/filterPowerSupplyEvents.c
++++ b/health/utils/libhealthloop/filterPowerSupplyEvents.c
+@@ -44,6 +44,8 @@ DEFINE_BPF_PROG("skfilter/power_supply", AID_ROOT, AID_SYSTEM, skfilter_power_su
+     // The upper bound of this loop has been chosen not to exceed the maximum
+     // number of instructions in a BPF program (BPF loops are unrolled).
+     #define LENGTH_PREFIX 16 // length of "ACTION=\0DEVPATH="
++    // Explicitly unroll to bound verifier work/logging on backported kernels.
++    #pragma unroll
+     for (uint64_t i = sizeof(struct nlmsghdr) + LENGTH_PREFIX; i < 256; ++i) {
+ 
+         // 16 bytes is big enough to cover both
+diff --git a/ir/aidl/default/main.cpp b/ir/aidl/default/main.cpp
+index 92376fc6c33366f954e99707b4dfdc1647778c52..eb9d89405a587477f92f54e82219fccd31f9f32f 100644
+--- a/ir/aidl/default/main.cpp
++++ b/ir/aidl/default/main.cpp
+@@ -57,31 +57,39 @@ ConsumerIr::ConsumerIr() {
+ }
+ 
+ ::ndk::ScopedAStatus ConsumerIr::getCarrierFreqs(std::vector<ConsumerIrFreqRange>* _aidl_return) {
++    if (!mDevice || !mDevice->get_num_carrier_freqs || !mDevice->get_carrier_freqs) {
++        return ::ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
++    }
+     int32_t len = mDevice->get_num_carrier_freqs(mDevice);
+     if (len < 0) {
+-        (*_aidl_return).clear();
+-        return ::ndk::ScopedAStatus::ok();
++        return ::ndk::ScopedAStatus::fromServiceSpecificError(-len);
+     }
+-
+-    consumerir_freq_range_t *rangeAr = new consumerir_freq_range_t[len];
+-    bool success = (mDevice->get_carrier_freqs(mDevice, len, rangeAr) >= 0);
+-    if (!success) {
+-        (*_aidl_return).clear();
+-        return ::ndk::ScopedAStatus::ok();
++    std::vector<consumerir_freq_range_t> ranges(len);
++    int count = mDevice->get_carrier_freqs(mDevice, len, ranges.data());
++    if (count < 0) {
++        return ::ndk::ScopedAStatus::fromServiceSpecificError(-count);
+     }
+-
+-    (*_aidl_return).resize(len);
+-    for (int32_t i = 0; i < len; i++) {
+-        (*_aidl_return)[i].minHz = static_cast<uint32_t>(rangeAr[i].min);
+-        (*_aidl_return)[i].maxHz = static_cast<uint32_t>(rangeAr[i].max);
++    if (count > len) {
++        return ::ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_STATE);
++    }
++    _aidl_return->resize(count);
++    for (int32_t i = 0; i < count; i++) {
++        (*_aidl_return)[i].minHz = ranges[i].min;
++        (*_aidl_return)[i].maxHz = ranges[i].max;
+     }
+     return ::ndk::ScopedAStatus::ok();
+ }
+ 
+ ::ndk::ScopedAStatus ConsumerIr::transmit(int32_t in_carrierFreqHz,
+                                           const std::vector<int32_t>& in_pattern) {
+-    if (in_carrierFreqHz > 0) {
+-        mDevice->transmit(mDevice, in_carrierFreqHz, in_pattern.data(), in_pattern.size());
++    if (!mDevice || !mDevice->transmit) {
++        return ::ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
++    }
++    if (in_carrierFreqHz > 0 && !in_pattern.empty()) {
++        int result = mDevice->transmit(mDevice, in_carrierFreqHz, in_pattern.data(), in_pattern.size());
++        if (result < 0) {
++            return ::ndk::ScopedAStatus::fromServiceSpecificError(-result);
++        }
+         return ::ndk::ScopedAStatus::ok();
+     } else {
+         return ::ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);

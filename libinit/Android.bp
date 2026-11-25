@@ -8,6 +8,9 @@ cc_library_static {
     name: "libinit_cannon",
     srcs: [
         "libinit_dalvik_heap.cpp",
+        "libinit_graphics.cpp",
+        "libinit_kernel.cpp",
+        "libinit_radio.cpp",
         "libinit_variant.cpp",
         "libinit_utils.cpp",
     ],
@@ -22,4 +25,25 @@ cc_library_static {
     whole_static_libs: ["libinit_cannon"],
     include_dirs: ["system/core/init"],
     recovery_available: true,
+}
+
+cc_library_static {
+    name: "init_cannon_native",
+    srcs: [
+        "init_cannon_native.cpp",
+        "init_cannon_nfc.cpp",
+        "init_cannon_gauge.cpp",
+        "libinit_graphics.cpp",
+        "libinit_kernel.cpp",
+        "libinit_utils.cpp",
+    ],
+    whole_static_libs: ["libbase"],
+    local_include_dirs: ["include"],
+    include_dirs: ["system/core/init"],
+    recovery_available: true,
+    target: {
+        recovery: {
+            cflags: ["-DRECOVERY"],
+        },
+    },
 }

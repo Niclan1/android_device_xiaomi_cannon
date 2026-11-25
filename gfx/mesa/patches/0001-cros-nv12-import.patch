@@ -1,0 +1,87 @@
+--- a/src/util/u_gralloc/u_gralloc_fallback.c
++++ b/src/util/u_gralloc/u_gralloc_fallback.c
+@@ -17,6 +17,8 @@
+ #include <dlfcn.h>
+ #include <errno.h>
+ #include <string.h>
++
++#include "u_gralloc_cros_nv12.h"
+ 
+ struct fallback_gralloc {
+    struct u_gralloc base;
+@@ -106,6 +108,9 @@
+    int drm_fourcc = 0;
+    int stride = 0;
+ 
++   if (hnd->hal_format == 0x1000)
++      return cros_nv12_get_buffer_info(hnd, out);
++
+    if (hnd->handle->numFds == 0)
+       return -EINVAL;
+ 
+--- /dev/null
++++ b/src/util/u_gralloc/u_gralloc_cros_nv12.h
+@@ -0,0 +1,63 @@
++/* SPDX-License-Identifier: MIT */
++#ifndef U_GRALLOC_CROS_NV12_H
++#define U_GRALLOC_CROS_NV12_H
++
++#include <errno.h>
++#include <limits.h>
++#include <stddef.h>
++#include <stdint.h>
++#include <string.h>
++
++/* minigbm cros_gralloc_handle, shared by its 32- and 64-bit allocators. */
++struct cros_nv12_handle {
++   int32_t version, num_fds, num_ints;
++   int32_t fds[5];
++   uint32_t strides[4], offsets[4], sizes[4];
++   uint32_t id, width, height, format, tiling;
++   uint64_t modifier, use_flags;
++   uint32_t magic, pixel_stride;
++   int32_t droid_format;
++   int64_t usage;
++   uint32_t num_planes;
++   uint64_t reserved_region_size, total_size;
++} __attribute__((packed));
++
++_Static_assert(sizeof(struct cros_nv12_handle) == 156, "cros handle size");
++_Static_assert(offsetof(struct cros_nv12_handle, magic) == 116, "cros magic offset");
++
++static int
++cros_nv12_get_buffer_info(struct u_gralloc_buffer_handle *hnd,
++                         struct u_gralloc_buffer_basic_info *out)
++{
++   const native_handle_t *native = hnd->handle;
++   struct cros_nv12_handle h;
++
++   if (!native || native->version != sizeof(native_handle_t) ||
++       native->numFds < 2 || native->numFds > 5 || native->numInts < 0 ||
++       (uint64_t)native->numFds + native->numInts <
++          (sizeof(h) - sizeof(native_handle_t)) / sizeof(int))
++      return -EINVAL;
++
++   memcpy(&h, native, sizeof(h));
++   if (h.magic != 0xABCDDCBA || h.format != DRM_FORMAT_NV12 ||
++       h.num_planes != 2 || !h.width || !h.height)
++      return -EINVAL;
++
++   for (unsigned i = 0; i < h.num_planes; ++i) {
++      if (h.fds[i] < 0 || !h.strides[i] || h.strides[i] > INT_MAX ||
++          h.offsets[i] > INT_MAX)
++         return -EINVAL;
++   }
++
++   out->drm_fourcc = h.format;
++   out->modifier = h.modifier;
++   out->num_planes = h.num_planes;
++   for (unsigned i = 0; i < h.num_planes; ++i) {
++      out->fds[i] = h.fds[i];
++      out->strides[i] = h.strides[i];
++      out->offsets[i] = h.offsets[i];
++   }
++   return 0;
++}
++
++#endif

@@ -1,26 +1,37 @@
-# Device Tree for Redmi Note 9 5G and Redmi Note 9T
+# LineageOS 24 for Redmi Note 9T
 
-The Redmi Note 9 5G (codenamed _"cannon"_) and Redmi Note 9T (codenamed _"cannong"_) are mid-range smartphones from Xiaomi.
+Unofficial Android 17 / Linux 6.18.33 port for the global **cannong,
+M2007J22G**. The public ROM is vanilla: no GApps or Magisk.
+
+**[Download the matched ROM, OrangeFox and DTBO](https://github.com/Niclan1/android_device_xiaomi_cannon/releases/tag/lineage-24.0-cannong-20261125)**
+
+Read **[INSTALLATION.md](release/INSTALLATION.md)** before flashing.
+**Use all three files from the same release, including its DTBO even if your
+old DTBO was built by this maintainer.** Do not bypass compatibility assertions.
+The tested route preserves userdata on this port's working Android 17 cohort;
+arbitrary MIUI migrations and all-device-variant compatibility are not claimed.
+
+OrangeFox supports ADB sideload but not encrypted internal-storage access.
+Do not format userdata to hide its storage warning. Charging-current and
+Thermal HAL integration remain limited. Read the full
+[release notes](release/RELEASE_NOTES.md) and
+[qualification record](release/ACCEPTANCE.json).
+
+## Source
+
+The matching source tag is `lineage-24.0-cannong-20261125`.
+[BUILDING.md](release/BUILDING.md) explains the pinned manifest, exact
+kernel source, platform patches, recovery source and signing requirements.
+[SOURCE_INDEX.json](release/SOURCE_INDEX.json) records the source identities.
+This branch's compiled device source is preserved, with release documentation
+and source-reconstruction material added.
+
+Credits: LineageOS, AOSP, Linux/Android common, OrangeFox, TeamWin,
+xiaomi-mt6853-devs, original Cannon maintainers and vendor-file owners.
+Per-file licenses and contributor credits remain in their respective sources.
+The original device description is preserved in
+[DEVICE_SPECIFICATIONS.md](release/DEVICE_SPECIFICATIONS.md).
 
 Copyright (C) 2023 LineageOS
 
 Copyright (C) 2022 StatiX
-
-## Specsheets
-
-| Device                  | Redmi Note 9 5G                                          | Redmi Note 9T                                            |
-| ----------------------- | ---------------------------------------------------------| ---------------------------------------------------------|
-| SoC                     | MediaTek Dimensity 800U 5G (7 nm)                        | MediaTek Dimensity 800U 5G (7 nm)                        |
-| CPU                     | Octa-core (2x2.4 GHz Cortex-A76 & 6x2.0 GHz Cortex-A55)  | Octa-core (2x2.4 GHz Cortex-A76 & 6x2.0 GHz Cortex-A55)  |
-| GPU                     | Mali-G57 MC3                                             | Mali-G57 MC3                                             |
-| Memory                  | 6/8 GB RAM                                               | 4 GB RAM                                                 |
-| Shipped Android version | Android 10                                               | Android 10                                               |
-| Storage                 | 128/256 GB                                               | 64/128 GB                                                |
-| Battery                 | Li-Po 5000 mAh, Non-removable                            | Li-Po 5000 mAh, Non-removable                            |
-| Dimensions              | 162 x 77.3 x 9.2 mm (6.38 x 3.04 x 0.36 in)              | 161.2 x 77.3 x 9.1 mm (6.35 x 3.04 x 0.36 in)            |
-| Display                 | 1080 x 2340 pixels, 19.5:9 ratio (about 395 ppi density) | 1080 x 2340 pixels, 19.5:9 ratio (about 395 ppi density) |
-| Rear camera 1           | 48 MP, f/1.8, 26mm (wide), 1/2.0", 0.8µm, PDAF           | 48 MP, f/1.8, 26mm (wide), 1/2.0", 0.8µm, PDAF           |
-| Rear camera 2           | 8 MP, f/2.2, 118˚ (ultrawide), 1/4.0", 1.12µm            | 2 MP, f/2.4, (macro)                                     |
-| Rear camera 3           | 2 MP, f/2.4, (macro)                                     | 2 MP, f/2.4, (depth)                                     |
-| Front camera            | 13 MP, f/2.3, 29mm (standard), 1/3.1", 1.12µm            | 13 MP, f/2.3, 29mm (standard), 1/3.1", 1.12µm            |
-| Image                   | ![Redmi Note 9 5G](https://fdn2.gsmarena.com/vv/pics/xiaomi/xiaomi-redmi-note-9-5g-1.jpg) | ![Redmi Note 9T 5G](https://fdn2.gsmarena.com/vv/pics/xiaomi/xiaomi-redmi-note-9t-5g-1.jpg) |

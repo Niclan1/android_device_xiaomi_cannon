@@ -22,3 +22,6 @@ type sysfs_touchpanel, sysfs_type, fs_type;
 
 # PPS
 type pps_socket, file_type;
+
+# /dev/ion on mainline kernels is the camera-only ION compat shim
+type mtk_cam_ion_device, dev_type;

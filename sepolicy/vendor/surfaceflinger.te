@@ -1,0 +1,2 @@
+# RenderEngine and minigbm map buffers through the mediatek-drm primary node
+allow surfaceflinger dri_device:chr_file { getattr map };

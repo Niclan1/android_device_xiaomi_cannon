@@ -1,0 +1,8 @@
+# MAC address provisioning: reads the fstab (androidboot.* / DT) and boot mode
+read_fstab(wlan_assistant)
+allow wlan_assistant sysfs_dt_firmware_android:dir search;
+allow wlan_assistant sysfs_dt_firmware_android:file r_file_perms;
+allow wlan_assistant sysfs_boot_mode:file r_file_perms;
+
+# Tries to publish ro.ril.oem.wifimac, which is a platform radio property
+dontaudit wlan_assistant radio_prop:property_service set;

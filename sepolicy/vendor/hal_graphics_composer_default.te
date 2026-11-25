@@ -1,2 +1,10 @@
 # Allow graphics composer hal to read panel nodes
 allow hal_graphics_composer_default vendor_sysfs_panel:file { read open getattr };
+
+# Backlight on mainline kernels (/sys/class/backlight/*/bl_power, brightness)
+allow hal_graphics_composer_default sysfs_leds:dir r_dir_perms;
+allow hal_graphics_composer_default sysfs_leds:lnk_file read;
+allow hal_graphics_composer_default sysfs_leds:file rw_file_perms;
+
+# Mainline composer loads the Mesa EGL/Vulkan SPHAL.
+gpu_sphal_use(hal_graphics_composer_default)

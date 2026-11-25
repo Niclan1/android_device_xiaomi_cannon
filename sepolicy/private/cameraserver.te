@@ -1,0 +1,6 @@
+# FMQ buffers received from the legacy camera HAL.
+allow cameraserver tmpfs:file { map read write };
+
+# Parcel blobs handed to apps are memfds; apps run with per-user MLS
+# categories, so the object must be trusted for the write mapping.
+typeattribute cameraserver_tmpfs mlstrustedobject;

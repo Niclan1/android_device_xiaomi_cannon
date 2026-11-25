@@ -1,0 +1,383 @@
+diff --git a/tools/releasetools/common.py b/tools/releasetools/common.py
+index fef646f3aec7e8fc2b75a8a8341a3762d6b94668..51c196c8bdcc17a04f3a7d5d4484e644ee21ea2b 100644
+--- a/tools/releasetools/common.py
++++ b/tools/releasetools/common.py
+@@ -3677,6 +3677,8 @@ class BlockDifference(object):
+                '{}.new.dat.br'.format(self.path),
+                new_data_name,
+                compress_type=zipfile.ZIP_STORED)
++      os.remove('{}.new.dat'.format(self.path))
++      os.remove('{}.new.dat.br'.format(self.path))
+     else:
+       new_data_name = '{}.new.dat'.format(self.partition)
+       ZipWrite(output_zip, '{}.new.dat'.format(self.path), new_data_name)
+@@ -4060,7 +4062,15 @@ class DynamicPartitionsDifference(object):
+       self._group_updates[g].src_size = int(source_info_dict.get(
+           "super_%s_group_size" % g, "0").strip())
+ 
+-    self._Compute()
++    if self._remove_all_before_apply and info_dict.get("full_ota_preserve_dynamic_groups") == "true":
++      if self._have_super_empty:
++        raise ValueError("Cannot replace super metadata while preserving dynamic groups")
++      # The installed layout must already contain every target partition. The
++      # updater rejects an impossible resize before committing metadata.
++      self._op_list = ["resize %s %d" % (p, u.tgt_size)
++                       for p, u in self._partition_updates.items()]
++    else:
++      self._Compute()
+ 
+   def WriteScript(self, script, output_zip, write_verify_script=False):
+     script.Comment('--- Start patching dynamic partitions ---')
+diff --git a/tools/releasetools/non_ab_ota.py b/tools/releasetools/non_ab_ota.py
+index 2d1075eb814ec945805d882fa50a337b5929f4db..48f26f6d1a97d5345be735a0cf7a121d42b5ad64 100644
+--- a/tools/releasetools/non_ab_ota.py
++++ b/tools/releasetools/non_ab_ota.py
+@@ -312,7 +312,8 @@ endif;
+       NonAbOtaPropertyFiles(),
+   )
+   FinalizeMetadata(metadata, staging_file, output_file,
+-                   needed_property_files, package_key=OPTIONS.package_key)
++                   needed_property_files, package_key=OPTIONS.package_key,
++                   input_is_temporary=staging_file != output_file)
+ 
+ 
+ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_file):
+@@ -599,7 +600,7 @@ def GenerateNonAbOtaPackage(target_file, output_file, source_file=None):
+       tmpfile = common.MakeTempFile(suffix=".zip")
+       os.unlink(tmpfile)
+       common.RunAndCheckOutput(
+-          ["zip", tmpfile, "-r", ".", "-0"], cwd=target_file)
++          ["zip", tmpfile, "-r", ".", "-1"], cwd=target_file)
+       assert zipfile.is_zipfile(tmpfile)
+       target_file = tmpfile
+ 
+diff --git a/tools/releasetools/ota_from_target_files.py b/tools/releasetools/ota_from_target_files.py
+index aaace2b638af8c2342970bf5f426a5c107c85687..f6a7fcc634505b4588bdf3f7abea6d7878aed484 100755
+--- a/tools/releasetools/ota_from_target_files.py
++++ b/tools/releasetools/ota_from_target_files.py
+@@ -1230,7 +1230,9 @@ def main(argv):
+     elif o in ("-2", "--two_step"):
+       OPTIONS.two_step = True
+     elif o == "--backup":
+-      OPTIONS.backuptool = True
++      if a.lower() not in ("true", "false"):
++        raise ValueError("--backup must be true or false")
++      OPTIONS.backuptool = a.lower() == "true"
+     elif o == "--include_secondary":
+       OPTIONS.include_secondary = True
+     elif o == "--no_signing":
+@@ -1553,7 +1555,7 @@ def main(argv):
+                        " detected. Please only pass in this flag if you want a"
+                        " SPL downgrade. Target SPL: {} Source SPL: {}"
+                        .format(target_spl, source_spl))
+-  if OPTIONS.disable_ublk and OPTIONS.info_dict.get("use_dynamic_partitions") == "true":
++  if generate_ab and OPTIONS.disable_ublk and OPTIONS.info_dict.get("use_dynamic_partitions") == "true":
+     logger.info("Disabling UBLK as requested")
+     args[0] = ModifyTargetFilesDynamicPartitionInfo(
+         args[0], "disable_ublk", "true")
+diff --git a/tools/releasetools/ota_utils.py b/tools/releasetools/ota_utils.py
+index d94c5c37c0ca04130056fdf48a2a5459b4ea42f7..cc6ee4e4a8805f2de841a3e9d8efaf9151c32c7d 100644
+--- a/tools/releasetools/ota_utils.py
++++ b/tools/releasetools/ota_utils.py
+@@ -64,7 +64,8 @@ VABC_COMPRESSION_PARAM_SUPPORT = {
+ }
+ 
+ 
+-def FinalizeMetadata(metadata, input_file, output_file, needed_property_files=None, package_key=None, pw=None):
++def FinalizeMetadata(metadata, input_file, output_file, needed_property_files=None, package_key=None, pw=None,
++                     input_is_temporary=False):
+   """Finalizes the metadata and signs an A/B OTA package.
+ 
+   In order to stream an A/B OTA package, we need 'ota-streaming-property-files'
+@@ -85,6 +86,8 @@ def FinalizeMetadata(metadata, input_file, output_file, needed_property_files=No
+     needed_property_files: The list of PropertyFiles' to be generated. Default is [AbOtaPropertyFiles(), StreamingPropertyFiles()]
+     package_key: The key used to sign this OTA package
+     pw: Password for the package_key
++    input_is_temporary: Release an owned input after preliminary signing and
++        property-file finalization succeed. Unsigned inputs are retained.
+   """
+   no_signing = package_key is None
+ 
+@@ -141,6 +144,9 @@ def FinalizeMetadata(metadata, input_file, output_file, needed_property_files=No
+         prelim_signing, needed_property_files)
+     FinalizeAllPropertyFiles(prelim_signing, needed_property_files)
+ 
++  if input_is_temporary and not no_signing:
++    os.unlink(input_file)
++
+   # Replace the METADATA entry.
+   ZipDelete(prelim_signing, [METADATA_NAME, METADATA_PROTO_NAME])
+   with zipfile.ZipFile(prelim_signing, 'a', allowZip64=True) as output_zip:
+diff --git a/tools/releasetools/test_common.py b/tools/releasetools/test_common.py
+index f9c6aaed13dd16a68de3c6572eecc7b4d0457df6..6455f65bba5b3fcd333d8c369db9b4f3b45029fa 100644
+--- a/tools/releasetools/test_common.py
++++ b/tools/releasetools/test_common.py
+@@ -1836,6 +1836,24 @@ unmap_partition("vendor");
+     self.assertLess(add_vendor, resize_vendor,
+                     "Should resize vendor after adding it")
+ 
++  def test_full_preserves_existing_groups(self):
++    target_info = {
++        "full_ota_preserve_dynamic_groups": "true",
++        "dynamic_partition_list": "system vendor",
++        "super_partition_groups": "group_foo",
++        "super_group_foo_group_size": str(4 * GiB),
++        "super_group_foo_partition_list": "system vendor",
++    }
++    diffs = [MockBlockDifference("system", FakeSparseImage(3 * GiB)),
++             MockBlockDifference("vendor", FakeSparseImage(GiB))]
++    dp_diff = common.DynamicPartitionsDifference(target_info, diffs)
++    with zipfile.ZipFile(self.output_path, "w") as output_zip:
++      dp_diff.WriteScript(self.script, output_zip)
++    self.assertEqual(self.get_op_list(self.output_path),
++                     ["resize system 3221225472", "resize vendor 1073741824"])
++    with self.assertRaisesRegex(ValueError, "replace super metadata"):
++      common.DynamicPartitionsDifference(dict(target_info, build_super_empty_partition="true"), diffs)
++
+   def test_inc_groups(self):
+     source_info = common.LoadDictionaryFromLines("""
+ super_partition_groups=group_foo group_bar group_baz
+diff --git a/tools/releasetools/test_non_ab_ota.py b/tools/releasetools/test_non_ab_ota.py
+index 5207e2fc72f3283f49f496c0ce4607f52ad6f927..b676f45c3cb248dc9df985ce26d7b124b2208f79 100644
+--- a/tools/releasetools/test_non_ab_ota.py
++++ b/tools/releasetools/test_non_ab_ota.py
+@@ -15,15 +15,161 @@
+ #
+ 
+ import copy
++import os
++import shutil
++from unittest import mock
+ import zipfile
+ 
+ import common
++import non_ab_ota
++import ota_utils
+ import test_utils
+ 
+ from non_ab_ota import NonAbOtaPropertyFiles, WriteFingerprintAssertion
+ from test_utils import PropertyFilesTestCase
+ 
+ 
++class FullOtaScratchTest(test_utils.ReleaseToolsTestCase):
++  def make_block_diff(self, source=None):
++    block_diff = common.BlockDifference.__new__(common.BlockDifference)
++    block_diff.src = source
++    block_diff.path = os.path.join(common.MakeTempDir(), "system")
++    block_diff.partition = "system"
++    block_diff.device = "/dev/block/system"
++    for suffix in (".new.dat", ".transfer.list", ".patch.dat"):
++      with open(block_diff.path + suffix, "wb") as stream:
++        stream.write(b"partition payload")
++    return block_diff
++
++  def compress(self, command):
++    with open(command[2].removeprefix("--output="), "wb") as stream:
++      stream.write(b"compressed partition payload")
++
++  def script(self):
++    script = mock.Mock()
++    script.WordWrap.side_effect = lambda value: value
++    return script
++
++  def test_release_preserves_committed_payload_and_control_files(self):
++    block_diff = self.make_block_diff()
++    archive = common.MakeTempFile(suffix=".zip")
++    with zipfile.ZipFile(archive, "w") as output, \
++        mock.patch.object(common, "RunAndCheckOutput", side_effect=self.compress):
++      block_diff._WriteUpdate(self.script(), output)
++    self.assertFalse(os.path.exists(block_diff.path + ".new.dat"))
++    self.assertFalse(os.path.exists(block_diff.path + ".new.dat.br"))
++    self.assertTrue(os.path.exists(block_diff.path + ".transfer.list"))
++    self.assertTrue(os.path.exists(block_diff.path + ".patch.dat"))
++    with zipfile.ZipFile(archive) as output:
++      self.assertEqual(b"compressed partition payload", output.read("system.new.dat.br"))
++
++  def test_incremental_keeps_its_data(self):
++    block_diff = self.make_block_diff(source=object())
++    archive = common.MakeTempFile(suffix=".zip")
++    with zipfile.ZipFile(archive, "w") as output:
++      block_diff._WriteUpdate(self.script(), output)
++    self.assertTrue(os.path.exists(block_diff.path + ".new.dat"))
++
++  def test_failed_compression_retains_input(self):
++    block_diff = self.make_block_diff()
++    archive = common.MakeTempFile(suffix=".zip")
++    with zipfile.ZipFile(archive, "w") as output, \
++        mock.patch.object(common, "RunAndCheckOutput", side_effect=RuntimeError("compression failed")):
++      with self.assertRaisesRegex(RuntimeError, "compression failed"):
++        block_diff._WriteUpdate(self.script(), output)
++    self.assertTrue(os.path.exists(block_diff.path + ".new.dat"))
++
++  def test_failed_archive_write_retains_both_buffers(self):
++    block_diff = self.make_block_diff()
++    archive = common.MakeTempFile(suffix=".zip")
++    write = common.ZipWrite
++
++    def fail_payload(*args, **kwargs):
++      if args[2] == "system.new.dat.br":
++        raise RuntimeError("archive failed")
++      return write(*args, **kwargs)
++
++    with zipfile.ZipFile(archive, "w") as output, \
++        mock.patch.object(common, "RunAndCheckOutput", side_effect=self.compress), \
++        mock.patch.object(common, "ZipWrite", side_effect=fail_payload):
++      with self.assertRaisesRegex(RuntimeError, "archive failed"):
++        block_diff._WriteUpdate(self.script(), output)
++    self.assertTrue(os.path.exists(block_diff.path + ".new.dat"))
++    self.assertTrue(os.path.exists(block_diff.path + ".new.dat.br"))
++
++  def test_directory_archive_is_lossless_without_a_stored_copy(self):
++    directory = common.MakeTempDir()
++    payload = b"target-files block\n" * 100000
++    with open(os.path.join(directory, "boot.img"), "wb") as stream:
++      stream.write(payload)
++    common.OPTIONS.info_dict = {}
++    common.OPTIONS.extracted_input = None
++    common.OPTIONS.extra_script = None
++    common.OPTIONS.device_specific = ""
++
++    def consume(input_zip, output_file):
++      self.assertEqual(payload, input_zip.read("boot.img"))
++      self.assertIsNone(input_zip.testzip())
++      self.assertLess(os.path.getsize(input_zip.filename), len(payload) // 4)
++
++    with mock.patch.object(non_ab_ota, "WriteFullOTAPackage", side_effect=consume) as writer:
++      non_ab_ota.GenerateNonAbOtaPackage(directory, "unused-output")
++    writer.assert_called_once()
++
++
++class MetadataScratchTest(test_utils.ReleaseToolsTestCase):
++  def make_package(self):
++    source = common.MakeTempFile(suffix=".zip")
++    with zipfile.ZipFile(source, "w") as archive:
++      archive.writestr("boot.img", b"boot payload")
++    return source, common.MakeTempFile(suffix=".zip")
++
++  def finalize(self, source, output, **kwargs):
++    ota_utils.FinalizeMetadata(
++        ota_utils.ota_metadata_pb2.OtaMetadata(), source, output,
++        needed_property_files=[NonAbOtaPropertyFiles()], **kwargs)
++    with zipfile.ZipFile(output) as archive:
++      self.assertEqual(b"boot payload", archive.read("boot.img"))
++
++  def test_owned_input_released_before_final_signing(self):
++    source, output = self.make_package()
++
++    def sign(input_file, output_file, *args):
++      self.assertEqual(input_file == source, os.path.exists(source))
++      shutil.copyfile(input_file, output_file)
++
++    with mock.patch.object(ota_utils, "SignOutput", side_effect=sign) as signer:
++      self.finalize(source, output, package_key="testkey", input_is_temporary=True)
++    self.assertEqual(2, signer.call_count)
++    self.assertFalse(os.path.exists(source))
++
++  def test_default_preserves_caller_input(self):
++    source, output = self.make_package()
++    with mock.patch.object(ota_utils, "SignOutput", side_effect=lambda a, b, *args: shutil.copyfile(a, b)):
++      self.finalize(source, output, package_key="testkey")
++    self.assertTrue(os.path.exists(source))
++
++  def test_failed_preliminary_signing_preserves_input(self):
++    source, output = self.make_package()
++    with mock.patch.object(ota_utils, "SignOutput", side_effect=RuntimeError("signing failed")):
++      with self.assertRaisesRegex(RuntimeError, "signing failed"):
++        self.finalize(source, output, package_key="testkey", input_is_temporary=True)
++    self.assertTrue(os.path.exists(source))
++
++  def test_unsigned_input_is_not_released(self):
++    source, output = self.make_package()
++    self.finalize(source, output, input_is_temporary=True)
++    self.assertTrue(os.path.exists(source))
++
++  def test_failed_property_finalization_preserves_input(self):
++    source, output = self.make_package()
++    with mock.patch.object(ota_utils, "SignOutput", side_effect=lambda a, b, *args: shutil.copyfile(a, b)), \
++        mock.patch.object(NonAbOtaPropertyFiles, "Finalize", side_effect=RuntimeError("metadata failed")):
++      with self.assertRaisesRegex(RuntimeError, "metadata failed"):
++        self.finalize(source, output, package_key="testkey", input_is_temporary=True)
++    self.assertTrue(os.path.exists(source))
++
++
+ class NonAbOtaPropertyFilesTest(PropertyFilesTestCase):
+   """Additional validity checks specialized for NonAbOtaPropertyFiles."""
+   def setUp(self):
+diff --git a/tools/releasetools/test_ota_from_target_files.py b/tools/releasetools/test_ota_from_target_files.py
+index b6fcb1841e3a37aea4cad594864d1bbeb45ef08b..af234fe2142be26f02630c94e982910d8a96d7bb 100644
+--- a/tools/releasetools/test_ota_from_target_files.py
++++ b/tools/releasetools/test_ota_from_target_files.py
+@@ -18,9 +18,11 @@ import copy
+ import os
+ import os.path
+ import tempfile
++from unittest import mock
+ import zipfile
+ 
+ import common
++import ota_from_target_files
+ import ota_metadata_pb2
+ import test_utils
+ from ota_utils import (
+@@ -89,6 +91,61 @@ def construct_target_files(secondary=False, compressedApex=False):
+   return target_files
+ 
+ 
++class MainBackupOptionTest(test_utils.ReleaseToolsTestCase):
++  def test_explicit_backup_policy(self):
++    for value, expected in (("false", False), ("true", True)):
++      with self.subTest(value=value), \
++          mock.patch.dict(OPTIONS.__dict__, backuptool=not expected), \
++          mock.patch.object(common, "InitLogging"), \
++          mock.patch.object(common, "LoadInfoDict", side_effect=FileNotFoundError):
++        with self.assertRaises(FileNotFoundError):
++          ota_from_target_files.main(["--backup=" + value, "input.zip", "output.zip"])
++        self.assertEqual(expected, OPTIONS.backuptool)
++
++  def test_invalid_backup_policy(self):
++    with self.assertRaisesRegex(ValueError, "--backup"):
++      ota_from_target_files.main(["--backup=typo", "input.zip", "output.zip"])
++
++
++class MainUblkTest(test_utils.ReleaseToolsTestCase):
++  def test_only_ab_generation_rewrites_snapshot_configuration(self):
++    for ab_update, force_non_ab, rewrite in (
++        (False, False, False), (True, False, True), (True, True, False)):
++      with self.subTest(ab_update=ab_update, force_non_ab=force_non_ab):
++        info = {
++            "ab_update": str(ab_update).lower(), "allow_non_ab": "true",
++            "use_dynamic_partitions": "true",
++        }
++        options = {
++            "extracted_input": None, "wipe_user_data": False,
++            "incremental_source": None, "downgrade": False,
++            "partial": None, "source_info_dict": None, "oem_source": None,
++            "force_non_ab": force_non_ab, "no_signing": True,
++            "package_key": "testkey", "payload_signer": "testsigner",
++            "disable_ublk": False,
++        }
++        with mock.patch.dict(OPTIONS.__dict__, options), \
++            mock.patch.object(common, "ParseOptions", return_value=["input.zip", "output.zip"]), \
++            mock.patch.object(common, "InitLogging"), \
++            mock.patch.object(common, "LoadInfoDict", return_value=info), \
++            mock.patch.object(common, "BuildInfo", return_value=mock.Mock(supports_ublk=False)), \
++            mock.patch.object(common, "GetKeyPasswords", return_value={}), \
++            mock.patch.object(ota_from_target_files, "ModifyTargetFilesDynamicPartitionInfo", return_value="modified.zip") as modifier, \
++            mock.patch.object(ota_from_target_files, "GenerateAbOtaPackage") as ab_writer, \
++            mock.patch.object(ota_from_target_files, "GenerateNonAbOtaPackage") as non_ab_writer:
++          ota_from_target_files.main([])
++          if rewrite:
++            modifier.assert_called_once_with("input.zip", "disable_ublk", "true")
++            ab_writer.assert_called_once_with(
++                target_file="modified.zip", output_file="output.zip", source_file=None)
++            non_ab_writer.assert_not_called()
++          else:
++            modifier.assert_not_called()
++            non_ab_writer.assert_called_once_with(
++                target_file="input.zip", output_file="output.zip", source_file=None)
++            ab_writer.assert_not_called()
++
++
+ class LoadOemDictsTest(test_utils.ReleaseToolsTestCase):
+ 
+   def test_NoneDict(self):

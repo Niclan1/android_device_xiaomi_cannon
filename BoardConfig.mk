@@ -43,6 +43,40 @@ TARGET_SCREEN_DENSITY := 440
 BOARD_BOOTIMG_HEADER_VERSION := 2
 BOARD_KERNEL_BASE := 0x40078000
 BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 androidboot.usbconfigfs=true androidboot.init_fatal_reboot_target=recovery
+# Match the stock 4.14 ramoops layout so recovery can read logs from failed boots.
+# Mainline kernel: keep the clocks, power domains and regulators that the
+# bootloader left on until every consumer has a driver.
+BOARD_KERNEL_CMDLINE += clk_ignore_unused pd_ignore_unused regulator_ignore_unused
+# MTK camera compat drivers (ISP, DIP, MDP, flash, seninf, imgsensor) are off
+# unless asked for, so a kernel without the camera stack still boots cleanly.
+BOARD_KERNEL_CMDLINE += mtk_cam.hw=1 mtk_cam.isp=1 mtk_cam.dip=1 mtk_cam.mdp=1 mtk_cam.flash=1
+# The camera HAL still allocates and maps image buffers through legacy /dev/ion.
+BOARD_KERNEL_CMDLINE += mtk_ion_compat.enable=1
+# Modem (CCCI/DPMAIF/CCMNI) stack, needed for RIL, data, VoLTE and NR.
+BOARD_KERNEL_CMDLINE += mtk_ccci.hw=1 mtk_vcu.enable=1 mtk_vcu.vdec=1
+# The LK/DTB bootargs turn on page_owner and initcall_debug; both cost
+# memory and boot/runtime overhead, so switch them back off.
+BOARD_KERNEL_CMDLINE += page_owner=off initcall_debug=0 init_on_alloc=0 kfence.sample_interval=0
+# Bring-up diagnostics, only in debug builds (TARGET_CANNON_DEBUG=true in the
+# environment or a local makefile). Release builds boot enforcing with the
+# default log level. Do not add initcall_debug, diag_bcb, slub_debug or
+# page_owner to a release boot.img (slub_debug=OFZPU/initcall_debug/page_owner
+# in /proc/cmdline come from the LK/DTB chosen bootargs, not from here).
+TARGET_CANNON_DEBUG ?= false
+ifeq ($(TARGET_CANNON_DEBUG),true)
+BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive loglevel=8 printk.devkmsg=on diag_blklog=expdb log_buf_len=8M
+else
+BOARD_KERNEL_CMDLINE += slub_debug=- log_buf_len=1M
+endif
+# Optional known-good 6.18 kernel for release zips: put Image.gz (and the
+# matching *.ko in modules/) in CANNON_PREBUILT_KERNEL_DIR. Without it the
+# kernel is built from TARGET_KERNEL_SOURCE as usual.
+CANNON_PREBUILT_KERNEL_DIR ?= device/xiaomi/cannon-kernel
+ifneq ($(wildcard $(CANNON_PREBUILT_KERNEL_DIR)/Image.gz),)
+TARGET_PREBUILT_KERNEL := $(CANNON_PREBUILT_KERNEL_DIR)/Image.gz
+TARGET_FORCE_PREBUILT_KERNEL := true
+BOARD_VENDOR_KERNEL_MODULES := $(wildcard $(CANNON_PREBUILT_KERNEL_DIR)/modules/*.ko)
+endif
 BOARD_PREBUILT_DTBOIMAGE := $(DEVICE_PATH)/prebuilts/dtbo.img
 BOARD_PREBUILT_DTBIMAGE := $(DEVICE_PATH)/prebuilts/dtb.img
 BOARD_KERNEL_PAGESIZE := 2048
@@ -54,14 +88,11 @@ BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOTIMG_HEADER_VERSION)
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --dtb $(BOARD_PREBUILT_DTBIMAGE)
-TARGET_KERNEL_CONFIG := cannon_defconfig
+# Keep the legacy v2 header version fields of the installed system. The boot
+# patch level is part of the key attestation state and must not go backwards.
+BOARD_MKBOOTIMG_ARGS += --os_version 13.0.0 --os_patch_level 2024-12
+TARGET_KERNEL_CONFIG := cannong_defconfig
 TARGET_KERNEL_SOURCE := kernel/xiaomi/cannon
-# Legacy 4.14 compat-vDSO requires explicit GNU tool prefixes.
-# Host tool packages/versions are pinned in source-lock; no kernel-version spoof.
-TARGET_KERNEL_ADDITIONAL_FLAGS += \
-    CROSS_COMPILE=/usr/bin/aarch64-linux-gnu- \
-    CROSS_COMPILE_ARM32=/usr/bin/arm-linux-gnueabi- \
-    CROSS_COMPILE_COMPAT=/usr/bin/arm-linux-gnueabi-
 
 # Partitions
 BOARD_FLASH_BLOCK_SIZE := 131072 # (BOARD_KERNEL_PAGESIZE * 64)
@@ -107,6 +138,7 @@ BOARD_HAS_MTK_HARDWARE := true
 # Init
 TARGET_INIT_VENDOR_LIB := //$(DEVICE_PATH):init_cannon
 TARGET_RECOVERY_DEVICE_MODULES := init_cannon
+$(call soong_config_set,libinit,vendor_init_lib,//$(DEVICE_PATH):init_cannon_native)
 
 # Properties
 TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop
@@ -154,8 +186,37 @@ BOARD_AVB_VBMETA_VENDOR_ROLLBACK_INDEX_LOCATION := 4
 DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := $(DEVICE_PATH)/configs/vintf/framework_compatibility_matrix.xml
 DEVICE_MATRIX_FILE += $(DEVICE_PATH)/configs/vintf/compatibility_matrix.xml
 DEVICE_MANIFEST_FILE += $(DEVICE_PATH)/configs/vintf/manifest.xml
-ODM_MANIFEST_SKUS += nfc
+DEVICE_MANIFEST_FILE += $(DEVICE_PATH)/configs/vintf/manifest_mtkgfx.xml
+DEVICE_MANIFEST_FILE += $(DEVICE_PATH)/configs/vintf/manifest_radio.xml
+DEVICE_MANIFEST_FILE += $(DEVICE_PATH)/configs/vintf/android.hardware.gnss-service-mediatek.xml
+# Vendor SKUs (ro.boot.product.vendor.sku, set by libinit). The default is the
+# 4.14 vendor kernel with the modem. "noradio" is the fallback for kernels
+# without the CCCI modem stack or androidboot.cannon.radio=off; "mainline" is a
+# 6.x kernel, which drops the HIDL MTK graphics HALs (manifest_mtkgfx.xml).
+DEVICE_MANIFEST_SKUS += noradio mainline mainline_noradio
+DEVICE_MANIFEST_NORADIO_FILES := \
+    $(DEVICE_PATH)/configs/vintf/manifest.xml \
+    $(DEVICE_PATH)/configs/vintf/manifest_mtkgfx.xml \
+    $(DEVICE_PATH)/configs/vintf/android.hardware.gnss-service-mediatek.xml
+DEVICE_MANIFEST_MAINLINE_FILES := \
+    $(DEVICE_PATH)/configs/vintf/manifest_gralloc4.xml \
+    $(DEVICE_PATH)/configs/vintf/manifest.xml \
+    $(DEVICE_PATH)/configs/vintf/manifest_radio.xml \
+    $(DEVICE_PATH)/configs/vintf/android.hardware.gnss-service-mediatek.xml
+DEVICE_MANIFEST_MAINLINE_NORADIO_FILES := \
+    $(DEVICE_PATH)/configs/vintf/manifest_gralloc4.xml \
+    $(DEVICE_PATH)/configs/vintf/manifest.xml \
+    $(DEVICE_PATH)/configs/vintf/android.hardware.gnss-service-mediatek.xml
+ODM_MANIFEST_SKUS += nfc nfc_mainline sw nfc_sw nfc_mainline_sw
 ODM_MANIFEST_NFC_FILES := $(DEVICE_PATH)/configs/vintf/manifest_nfc.xml
+ODM_MANIFEST_NFC_MAINLINE_FILES := $(DEVICE_PATH)/configs/vintf/manifest_nfc_mainline.xml
+ODM_MANIFEST_SW_FILES := $(DEVICE_PATH)/configs/vintf/manifest_vcodec_sw.xml
+ODM_MANIFEST_NFC_SW_FILES := \
+    $(DEVICE_PATH)/configs/vintf/manifest_nfc.xml \
+    $(DEVICE_PATH)/configs/vintf/manifest_vcodec_sw.xml
+ODM_MANIFEST_NFC_MAINLINE_SW_FILES := \
+    $(DEVICE_PATH)/configs/vintf/manifest_nfc_mainline.xml \
+    $(DEVICE_PATH)/configs/vintf/manifest_vcodec_sw.xml
 
 # Releasetools
 TARGET_RELEASETOOLS_EXTENSIONS := $(DEVICE_PATH)
@@ -179,3 +240,6 @@ include vendor/xiaomi/cannon/BoardConfigVendor.mk
 
 # Retain cannon musb-hdrc/rndis initialization instead of the generic gadget rc.
 $(call soong_config_set,mediatek_gadget,use_custom_usb_gadget_rc,true)
+
+# Parse power hints after post-fs-data mounts, on either kernel.
+$(call soong_config_set,power_libperfmgr,service_init_rc,//device/xiaomi/cannon:cannon_power_service_init_rc)

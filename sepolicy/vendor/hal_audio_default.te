@@ -16,6 +16,9 @@ allow hal_audio_default mtk_audiohal_data_file:file create_file_perms;
 
 allow hal_audio_default sysfs_boot_mode:file r_file_perms;
 
+# FMQ memfds from audioserver are labelled plain tmpfs on mainline kernels
+allow hal_audio_default tmpfs:file { getattr map read write };
+
 set_prop(hal_audio_default, vendor_mtk_audiohal_prop)
 get_prop(hal_audio_default, vendor_mtk_audiohal_prop)
 get_prop(hal_audio_default, vendor_mtk_default_prop)

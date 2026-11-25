@@ -1,0 +1,4 @@
+allow mediaserver mediaextractor_tmpfs:file { map read write };
+
+# FMQ and audio buffers received by the legacy media service.
+allow mediaserver { audioserver_tmpfs tmpfs }:file { map read write };

@@ -7,6 +7,20 @@ on init
     chmod 0666 /dev/goodix_fp
     chown system system /dev/goodix_fp
 
+    # cpu-controller groups used by CameraServicePerformance and
+    # NNApiHALPerformance (vendor task_profiles.json); init.rc only creates the
+    # generic ones.
+    mkdir /dev/cpuctl/camera-daemon 0755 system system
+    mkdir /dev/cpuctl/nnapi-hal 0755 system system
+    chown system system /dev/cpuctl/camera-daemon/tasks
+    chown system system /dev/cpuctl/camera-daemon/cgroup.procs
+    chown system system /dev/cpuctl/nnapi-hal/tasks
+    chown system system /dev/cpuctl/nnapi-hal/cgroup.procs
+    chmod 0664 /dev/cpuctl/camera-daemon/tasks
+    chmod 0664 /dev/cpuctl/camera-daemon/cgroup.procs
+    chmod 0664 /dev/cpuctl/nnapi-hal/tasks
+    chmod 0664 /dev/cpuctl/nnapi-hal/cgroup.procs
+
 on boot
     chown system system /sys/bus/platform/devices/fingerprint/clk_enable
     chmod 0660 /sys/bus/platform/devices/fingerprint/clk_enable
@@ -53,3 +67,89 @@ on boot && property:ro.boot.product.hardware.sku=nfc
     enable mtk_secure_element_hal_service
     enable vendor.nfc_hal_service
     enable nqnfc_1_2_hal_service
+
+on boot && property:ro.boot.product.hardware.sku=nfc_sw
+    enable vendor.secure_element
+    enable mtk_secure_element_hal_service
+    enable vendor.nfc_hal_service
+    enable nqnfc_1_2_hal_service
+
+# ro.vendor.cannon.kernel (libinit): legacy = 4.14 vendor kernel, mainline = 6.x.
+# The GM30 gauge daemons and the MTK video processor daemon need 4.14 vendor
+# drivers. They are not disabled, so class_start core (boot) and class_start
+# main (nonencrypted) in init.rc start them; stopping them in the same trigger,
+# after the class_start, marks them disabled instead of letting them exit and
+# restart every 5 s.
+on boot && property:ro.vendor.cannon.kernel=mainline
+    stop fuelgauged
+
+on nonencrypted && property:ro.vendor.cannon.kernel=mainline
+    stop fuelgauged
+    stop fuelgauged_nvram
+
+# ro.vendor.cannon.vcodec (libinit): hw on 4.14 or with androidboot.cannon.vcodec=hw.
+# The c2 HAL (class hal, started on boot) probes the c2.mtk video codecs once
+# through /dev/video* and vpud, so vpud has to be up before it.
+on post-fs-data && property:ro.vendor.cannon.vcodec=hw
+    start vpud
+    enable android-hardware-media-c2-hal-1-2
+
+on post-fs-data && property:ro.vendor.cannon.vcodec=enc
+    start vpud
+    enable android-hardware-media-c2-hal-1-2
+
+on nonencrypted && property:ro.vendor.cannon.vcodec=sw
+    stop vpud
+
+# Radio off: keep the CCCI userspace (class core, started at boot) from
+# restart-looping on missing /dev/ccci_* nodes. muxd, rild and md_monitor are
+# disabled and only started by ccci_mdinit.
+on boot && property:ro.boot.cannon.radio=off
+    stop ccci_mdinit
+    stop ccci3_mdinit
+    stop vendor.ccci_rpcd
+
+# Video telephony needs the modem: only skip it for the noradio fallback
+# (libinit: no CCCI in the kernel, or androidboot.cannon.radio=off).
+on boot && property:ro.boot.cannon.radio=off
+    stop vtservice_hidl
+
+on nonencrypted && property:ro.boot.cannon.radio=off
+    stop vtservice
+    stop vtservice_hidl
+
+# ViLTE's IMCB dispatcher busy-loops on this modem image and pins a core.
+# Voice over LTE does not need it, so keep video calling off for now.
+on property:sys.boot_completed=1
+    stop vtservice
+    setprop persist.vendor.vilte_support 0
+
+# The Xiaomi fingerprint HAL registers its AIDL service even when no sensor
+# driver is bound and then crashes on the first session. On mainline kernels a
+# crash means the FPC/Goodix driver is missing, so keep it stopped rather than
+# letting init restart it (and the framework retry) for the whole uptime.
+on property:init.svc.vendor.fingerprint-default=restarting && property:ro.vendor.cannon.kernel=mainline
+    stop vendor.fingerprint-default
+
+# Camera on mainline kernels: no CCU/PQ, P2 SFP on, bypass TPI, SW JPEG.
+# The 4.14 3A path needs the CCU, its CPU AE fallback crashes.
+on post-fs && property:ro.vendor.cannon.kernel=mainline
+    setprop vendor.debug.ccu_mgr_ccu.enable 0
+    setprop vendor.debug.p2s.sfp.bypass 0
+    setprop vendor.debug.tpi.s.bypass 1
+    setprop vendor.debug.camera.jpeg.swmode 1
+    setprop vendor.debug.camera.3dnr.enable 0
+    setprop vendor.debug.p2s.dsdn.mode 0
+    setprop vendor.debug.camera.3dnr.dsdn.enable 0
+
+# Responsiveness: faster schedutil ramp, quicker GPU devfreq sampling and
+# lighter read-ahead on UFS.
+on property:sys.boot_completed=1
+    write /sys/devices/system/cpu/cpufreq/policy0/schedutil/rate_limit_us 500
+    write /sys/devices/system/cpu/cpufreq/policy6/schedutil/rate_limit_us 500
+    write /sys/class/devfreq/13000000.gpu/polling_interval 16
+    write /sys/class/devfreq/13000000.gpu/min_freq 390000000
+    write /dev/cpuctl/top-app/cpu.uclamp.latency_sensitive 1
+    write /sys/block/sda/queue/read_ahead_kb 128
+    write /sys/block/sdc/queue/read_ahead_kb 128
+    write /proc/sys/kernel/printk "4 4 1 4"

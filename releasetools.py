@@ -11,39 +11,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import common
-import re
-
 def FullOTA_InstallEnd(info):
   OTA_InstallEnd(info)
   return
-
-def FullOTA_Assertions(info):
-    CheckRecovery(info)
-    return
 
 def IncrementalOTA_InstallEnd(info):
   OTA_InstallEnd(info)
   return
 
-def IncrementalOTA_Assertions(info):
-    CheckRecovery(info)
-    return
-
-def CheckRecovery(info):
-    info.script.AppendExtra('assert(getprop("ro.orangefox.version") == "" || abort("ERROR: OrangeFox is not supported! "););')
-    info.script.AppendExtra('assert(getprop("ro.twrp.boot") == "" || abort("ERROR: TWRP is not supported! "););')
-    return
-
-def AddImage(info, basename, dest):
-  name = basename
-  data = info.input_zip.read("IMAGES/" + basename)
-  common.ZipWriteStr(info.output_zip, name, data)
-  info.script.AppendExtra('package_extract_file("%s", "%s");' % (name, dest))
-
 def OTA_InstallEnd(info):
-  info.script.Print("Patching firmware images...")
-  AddImage(info, "vbmeta.img", "/dev/block/platform/bootdevice/by-name/vbmeta")
-  AddImage(info, "vbmeta_system.img", "/dev/block/platform/bootdevice/by-name/vbmeta_system")
-  AddImage(info, "vbmeta_vendor.img", "/dev/block/platform/bootdevice/by-name/vbmeta_vendor")
+  # vbmeta, vbmeta_system and vbmeta_vendor stay as they are on the device;
+  # only boot, dtbo and the dynamic partitions are replaced.
+  info.script.Print("Preserving existing verified-boot metadata.")
   return

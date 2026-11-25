@@ -1,0 +1,44 @@
+# Runtime graphics stack selection, see libinit/libinit_graphics.cpp.
+#
+# legacy:   4.14 vendor kernel, MTK HWC/gralloc + Mali (nothing changes here)
+# mainline: 6.x kernel with upstream mediatek-drm, no MTK display/Mali drivers.
+#           drm_hwcomposer and minigbm come from vendor APEXes selected by
+#           libinit, so keep the MTK display blobs from crash-looping.
+
+on early-init && property:ro.vendor.cannon.gfx=mainline
+    stop vendor.hwcomposer-2-1
+    stop pq-2-2
+    # The MTK camera HAL still allocates and maps through HIDL gralloc 4.0.
+    # Swap the Mali backed MTK allocator and mapper for minigbm builds.
+    stop vendor.gralloc-4-0
+    start vendor.gralloc-4-0-minigbm
+    mount none /vendor/lib64/hw/android.hardware.graphics.mapper@4.0-impl.cannon.so /vendor/lib64/hw/android.hardware.graphics.mapper@4.0-impl-mediatek.so bind
+    mount none /vendor/lib/hw/android.hardware.graphics.mapper@4.0-impl.cannon.so /vendor/lib/hw/android.hardware.graphics.mapper@4.0-impl-mediatek.so bind
+
+# The gauge, vpud and video telephony stops live in init.cannon.rc
+# (ro.vendor.cannon.kernel / ro.boot.cannon.radio).
+
+on init && property:ro.vendor.cannon.gfx=mainline
+    # init.mt6853.rc limits system-background to cpu0-5, and SurfaceFlinger's
+    # task profiles put its main and RenderEngine threads there. Without the
+    # MTK GPU the composition runs on the CPU, so let it use the big cores.
+    # This action is parsed after /vendor/etc/init/hw/init.mt6853.rc.
+    write /dev/cpuset/system-background/cpus 0-7
+
+    # minigbm imports/maps buffers through the mediatek-drm primary node in
+    # every client process. The vendor ueventd.rc restricts card0, and the
+    # KMS node is card0 or card1 depending on whether panfrost probed first.
+    chown root graphics /dev/dri/card0
+    chmod 0666 /dev/dri/card0
+    chown root graphics /dev/dri/card1
+    chmod 0666 /dev/dri/card1
+
+# Opt-in, androidboot.cannon.hwc=generic: let drm_hwcomposer assign the
+# overlay planes instead of compositing every layer on the GPU (it treats
+# mediatek-drm as client-only by default). Pair it with
+# mediatek_drm.pixel_blend=1 so premultiplied alpha layers blend correctly.
+# The EGL/GLES driver is a libinit property: Mesa panfrost by default,
+# androidboot.cannon.egl=angle falls back to ANGLE/SwiftShader.
+on init && property:ro.vendor.cannon.gfx=mainline && property:ro.boot.cannon.hwc=generic
+    setprop vendor.hwc.backend_override generic
+

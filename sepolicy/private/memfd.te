@@ -1,0 +1,19 @@
+# Shared memory moved from ashmem to memfd on mainline, so the backing files
+# now carry the creator's tmpfs label. Apps map buffers handed out by the media
+# servers (AudioRecord tracks, metadata retriever, extractor), so these must
+# be readable across MLS categories like the old ashmem regions were.
+typeattribute audioserver_tmpfs mlstrustedobject;
+typeattribute mediaserver_tmpfs mlstrustedobject;
+typeattribute mediaextractor_tmpfs mlstrustedobject;
+
+# Camera parcel blobs passed back to system_server
+allow system_server cameraserver_tmpfs:file { read write map getattr };
+
+# RenderScript message queues created by the calling app
+allow rs appdomain_tmpfs:file { read write map getattr };
+
+# FMQ message queues from vendor HALs and codecs land on plain tmpfs; audio
+# capture and app-side codec queues need to map them like the old ashmem.
+typeattribute tmpfs mlstrustedobject;
+allow audioserver tmpfs:file { read write map getattr };
+allow appdomain tmpfs:file { read write map getattr };

@@ -7,10 +7,28 @@ genfscon sysfs /devices/platform/fingerprint                                    
 
 # Graphics
 genfscon sysfs /devices/platform/13000000.mali                                        u:object_r:sysfs_gpu:s0
+genfscon sysfs /devices/platform/13000000.gpu                                         u:object_r:sysfs_gpu:s0
+# libdrm drmGetDevice() reads the mediatek-drm uevent in every drawing process
+genfscon sysfs /devices/platform/14000000.dispsys_config/mediatek-drm                 u:object_r:sysfs_gpu:s0
 
 # LED
 genfscon sysfs /devices/platform/disp_leds/leds/lcd-backlight/brightness              u:object_r:sysfs_leds:s0
 genfscon sysfs /devices/platform/disp_leds/leds/lcd-backlight/max_brightness          u:object_r:sysfs_leds:s0
+
+# Backlight (mainline: LM36273 on i2c7; the i2c bus number follows probe order)
+genfscon sysfs /class/backlight                                                       u:object_r:sysfs_leds:s0
+genfscon sysfs /devices/platform/11d01000.i2c7/i2c-1/1-0011/backlight                 u:object_r:sysfs_leds:s0
+genfscon sysfs /devices/platform/11d01000.i2c7/i2c-7/7-0011/backlight                 u:object_r:sysfs_leds:s0
+
+# Power supply (mainline: MT6360 charger on i2c5, read by the health HAL)
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-0/0-0034/mt6360-chg.2.auto/power_supply      u:object_r:sysfs_batteryinfo:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-5/5-0034/mt6360-chg.2.auto/power_supply      u:object_r:sysfs_batteryinfo:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-1/1-0034/mt6360-chg.2.auto/power_supply      u:object_r:sysfs_batteryinfo:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-2/2-0034/mt6360-chg.2.auto/power_supply      u:object_r:sysfs_batteryinfo:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-3/3-0034/mt6360-chg.2.auto/power_supply      u:object_r:sysfs_batteryinfo:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-4/4-0034/mt6360-chg.2.auto/power_supply      u:object_r:sysfs_batteryinfo:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-6/6-0034/mt6360-chg.2.auto/power_supply      u:object_r:sysfs_batteryinfo:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-7/7-0034/mt6360-chg.2.auto/power_supply      u:object_r:sysfs_batteryinfo:s0
 
 # Vibrator
 genfscon sysfs /devices/platform/haptic_pwm/activate                                  u:object_r:sysfs_vibrator:s0
@@ -34,5 +52,28 @@ genfscon sysfs /devices/platform/11d00000.i2c5/i2c-5/5-004e/wakeup              
 genfscon sysfs /devices/platform/battery/power_supply/bms/wakeup                            u:object_r:sysfs_wakeup:s0
 genfscon sysfs /devices/platform/battery/power_supply/bms/wakeup28                          u:object_r:sysfs_wakeup:s0
 genfscon sysfs /devices/platform/fingerprint/wakeup                                         u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/musb-hdrc/wakeup                                           u:object_r:sysfs_wakeup:s0
 genfscon sysfs /devices/platform/odm/odm:testing-mode/wakeup                                u:object_r:sysfs_wakeup:s0
 genfscon sysfs /devices/virtual/input/input2/wakeup32                                       u:object_r:sysfs_wakeup:s0
+
+# Wakeup sources on mainline kernels (system_suspend reads wakeup*/name)
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-0/0-0034/mt6360-chg.2.auto/power_supply/ac/wakeup    u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-5/5-0034/mt6360-chg.2.auto/power_supply/ac/wakeup    u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-1/1-0034/mt6360-chg.2.auto/power_supply/ac/wakeup    u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-2/2-0034/mt6360-chg.2.auto/power_supply/ac/wakeup    u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-3/3-0034/mt6360-chg.2.auto/power_supply/ac/wakeup    u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-4/4-0034/mt6360-chg.2.auto/power_supply/ac/wakeup    u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-6/6-0034/mt6360-chg.2.auto/power_supply/ac/wakeup    u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/11d00000.i2c5/i2c-7/7-0034/mt6360-chg.2.auto/power_supply/ac/wakeup    u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/battery-monitor/power_supply/battery/wakeup                u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/10026000.pwrap/10026000.pwrap:mt6359-pmic/mt6359-rtc/rtc/rtc0/alarmtimer.0.auto/wakeup u:object_r:sysfs_wakeup:s0
+
+# Mainline haptics and LM36273 backlight (current i2c enumeration).
+genfscon sysfs /devices/platform/haptic_pwm/leds/vibrator u:object_r:sysfs_vibrator:s0
+genfscon sysfs /devices/platform/11d01000.i2c7/i2c-5/5-0011/backlight u:object_r:sysfs_leds:s0
+genfscon sysfs /devices/platform/11d01000.i2c7/i2c-5/5-0011/leds/lcd-backlight u:object_r:sysfs_leds:s0
+
+# Mainline battery attributes and wakeup sources; genfs paths are prefixes.
+genfscon sysfs /devices/platform/battery-monitor/power_supply/battery u:object_r:sysfs_batteryinfo:s0
+genfscon sysfs /devices/platform/10010000.kp/wakeup u:object_r:sysfs_wakeup:s0
+genfscon sysfs /devices/platform/11018000.spi4/spi_master/spi4/spi4.0/wakeup u:object_r:sysfs_wakeup:s0

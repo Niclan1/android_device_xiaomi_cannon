@@ -1,0 +1,9 @@
+on early-init && property:ro.vendor.cannon.gauge=upstream
+    stop fuelgauged
+    stop fuelgauged_nvram
+
+on boot && property:ro.boot.product.hardware.sku=nfc_mainline
+    enable vendor.nfc_hal_service
+
+on boot && property:ro.boot.product.hardware.sku=nfc_mainline_sw
+    enable vendor.nfc_hal_service

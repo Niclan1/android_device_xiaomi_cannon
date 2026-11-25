@@ -9,6 +9,24 @@ ro.charger.enable_suspend=true
 
 # Dex
 persist.bg.dexopt.enable=true
+# CPUs 0-5 are Cortex-A55, 6-7 are Cortex-A76
+dalvik.vm.boot-dex2oat-threads=8
+dalvik.vm.boot-dex2oat-cpu-set=0,1,2,3,4,5,6,7
+dalvik.vm.dex2oat-threads=6
+dalvik.vm.dex2oat-cpu-set=0,1,2,3,4,5,6,7
+dalvik.vm.restore-dex2oat-threads=6
+dalvik.vm.restore-dex2oat-cpu-set=0,1,2,3,4,5,6,7
+dalvik.vm.background-dex2oat-threads=4
+dalvik.vm.background-dex2oat-cpu-set=0,1,2,3,4,5
+
+# LMKD (PSI, 4 GB RAM with 55% zram)
+ro.lmk.kill_heaviest_task=true
+ro.lmk.psi_partial_stall_ms=70
+ro.lmk.psi_complete_stall_ms=700
+ro.lmk.thrashing_limit=30
+ro.lmk.thrashing_limit_decay=50
+ro.lmk.swap_free_low_percentage=20
+ro.lmk.swap_util_max=90
 
 # Radio
 persist.radio.apm_sim_not_pwdn=1
@@ -26,3 +44,14 @@ ro.mtk_perf_simple_start_win=1
 ro.netflix.bsp_rev=MTK6853-32100-1
 ro.netflix.channel=497730f0-ad4b-11e7-95a4-c7ad113ce187
 ro.netflix.signup=1
+
+# Graphics: ro.boot.vendor.apex.* (composer/gralloc APEX selection) is set by
+# libinit for both kernels; apexd_select_prop cannot be set from build.prop.
+
+# MediaTek CTA (system_mtk_cta_set_prop is a system property)
+ro.vendor.mtk_cta_set=1
+
+# Storage: have MediaProvider open media files through FUSE with kernel
+# passthrough. Without it apps get lower-filesystem fds, and a file that grows
+# while being written keeps a stale size on /sdcard.
+persist.sys.fuse.passthrough.enable=true

@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Recovery fstab for cannon/cannong, derived from the LineageOS fstab.mt6853.
+# Only partitions recovery needs are listed; calibration, modem and
+# bootloader partitions are intentionally not exposed.
+#<src>                    <mnt_point>   <type> <mnt_flags>                                                                                      <fs_mgr_flags>
+system                     /system       ext4   ro                                                                                               wait,logical
+vendor                     /vendor       ext4   ro                                                                                               wait,logical
+product                    /product      ext4   ro                                                                                               wait,logical
+system_ext                 /system_ext   ext4   ro                                                                                               wait,logical
+/dev/block/by-name/cache    /cache       ext4   noatime,nosuid,nodev,noauto_da_alloc                                                             wait
+/dev/block/by-name/boot     /boot        emmc   defaults                                                                                         defaults
+/dev/block/by-name/recovery /recovery    emmc   defaults                                                                                         defaults
+/dev/block/by-name/dtbo     /dtbo        emmc   defaults                                                                                         defaults
+/dev/block/by-name/misc     /misc        emmc   defaults                                                                                         defaults

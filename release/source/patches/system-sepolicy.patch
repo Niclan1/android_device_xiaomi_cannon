@@ -1,0 +1,13 @@
+diff --git a/private/logpersist.te b/private/logpersist.te
+index 34022d64cc5446ace50f8ca35ce817f1b6764e73..7bac0a7ede8cc001884332807bbb06968a3baea2 100644
+--- a/private/logpersist.te
++++ b/private/logpersist.te
+@@ -10,6 +10,8 @@ userdebug_or_eng(`
+   allow logpersist misc_logd_file:dir rw_dir_perms;
+ 
+   allow logpersist self:global_capability_class_set sys_nice;
++  # Temporary cannong logcat stdout to bounded init-domain cache reader.
++  allow logpersist init:fifo_file { write getattr };
+   allow logpersist pstorefs:dir search;
+   allow logpersist pstorefs:file r_file_perms;
+ 

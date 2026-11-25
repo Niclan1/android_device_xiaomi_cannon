@@ -1,0 +1,53 @@
+//
+// Copyright (C) 2025 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+// minigbm gralloc (AIDL allocator + stable-C mapper) for mainline kernels.
+// Only activated by apexd when libinit selects it via
+// ro.boot.vendor.apex.com.xiaomi.cannon.gralloc, see libinit_graphics.cpp.
+apex {
+    name: "com.xiaomi.cannon.gralloc",
+    manifest: "apex_manifest.json",
+    key: "com.android.hardware.key",
+    certificate: ":com.android.hardware.certificate",
+    file_contexts: "apex_file_contexts",
+    updatable: false,
+    vendor: true,
+
+    // for app_process32 apps
+    compile_multilib: "both",
+
+    binaries: [
+        "android.hardware.graphics.allocator-service.minigbm",
+    ],
+    native_shared_libs: [
+        "mapper.minigbm",
+    ],
+    prebuilts: [
+        "allocator.minigbm.xml",
+        "com.xiaomi.cannon.gralloc.rc",
+        "com.xiaomi.cannon.gralloc-linker-config",
+        "mapper.minigbm.xml",
+    ],
+}
+
+linker_config {
+    name: "com.xiaomi.cannon.gralloc-linker-config",
+    src: "apex_linkerconfig.json",
+    installable: false,
+}
+
+genrule {
+    name: "gen-com.xiaomi.cannon.gralloc.rc",
+    srcs: [":allocator.minigbm.rc"],
+    out: ["com.xiaomi.cannon.gralloc.rc"],
+    cmd: "sed -E 's%/vendor/bin/%/apex/com.xiaomi.cannon.gralloc/bin/%' $(in) > $(out)",
+}
+
+prebuilt_etc {
+    name: "com.xiaomi.cannon.gralloc.rc",
+    src: ":gen-com.xiaomi.cannon.gralloc.rc",
+    installable: false,
+}

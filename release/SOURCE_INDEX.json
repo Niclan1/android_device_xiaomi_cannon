@@ -1,0 +1,42 @@
+{
+  "release_tag": "lineage-24.0-cannong-20261125",
+  "snapshot_policy": "Four new publication commits on the actual publication date; existing public history and copyright notices preserved.",
+  "original_compiled_revisions_are_not_snapshot_commits": true,
+  "manifest": "source/manifest.xml",
+  "overlays": "source/overlays.json",
+  "recovery": "source/recovery/sources.json",
+  "components": [
+    {
+      "path": "kernel/xiaomi/cannon",
+      "repo": "Niclan1/android_kernel_xiaomi_cannon",
+      "compiled_revision": "cfff553735e10828868119d411182e36e3f79695",
+      "compiled_tree": "b307828b150cf15dba4fd324b52b97e6eb917d45",
+      "snapshot_reference": "refs/tags/lineage-24.0-cannong-20261125",
+      "url": "https://github.com/Niclan1/android_kernel_xiaomi_cannon/tree/lineage-24.0-cannong-20261125"
+    },
+    {
+      "path": "hardware/lineage/compat",
+      "repo": "Niclan1/android_hardware_lineage_compat",
+      "compiled_revision": "b1adee53b07bd8300531bf9edb9a5285197c5594",
+      "compiled_tree": "3878cef59a984ec6c1d67f61811b14da6bc085f3",
+      "snapshot_reference": "refs/tags/lineage-24.0-cannong-20261125",
+      "url": "https://github.com/Niclan1/android_hardware_lineage_compat/tree/lineage-24.0-cannong-20261125"
+    },
+    {
+      "path": "vendor/xiaomi/cannon",
+      "repo": "Niclan1/android_vendor_xiaomi_cannon",
+      "compiled_revision": "97663d7d80d624679c685395803372ad9c2671f2",
+      "compiled_tree": "17a622820618768c3fdf485b9873314da1a7bf2d",
+      "snapshot_reference": "refs/tags/lineage-24.0-cannong-20261125",
+      "url": "https://github.com/Niclan1/android_vendor_xiaomi_cannon/tree/lineage-24.0-cannong-20261125"
+    },
+    {
+      "path": "device/xiaomi/cannon",
+      "repo": "Niclan1/android_device_xiaomi_cannon",
+      "compiled_revision": "ffbc3ef8a4b24d8bf3fcb4bb531e8d2efcd6b7cf",
+      "compiled_tree": "266fa6d6e6d96fbb36053178798ca51d1e70716c",
+      "snapshot_reference": "refs/tags/lineage-24.0-cannong-20261125",
+      "url": "https://github.com/Niclan1/android_device_xiaomi_cannon/tree/lineage-24.0-cannong-20261125"
+    }
+  ]
+}

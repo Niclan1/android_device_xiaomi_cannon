@@ -1,0 +1,465 @@
+diff --git a/android/packaging.go b/android/packaging.go
+index 3cbf90b676a4946d8a24a8387934d6afbc64c711..ad10d3800e41ed559f6631c823e5a233cfc64748 100644
+--- a/android/packaging.go
++++ b/android/packaging.go
+@@ -508,6 +508,26 @@ func (p *PackagingBase) AddDeps(ctx BottomUpMutatorContext, depTag blueprint.Dep
+ 			targetVariation = append(targetVariation, rustLibDylibVariation)
+ 		}
+ 
++		// Excluded modules can have fewer architectures than this package.
++		// Follow an existing variant for its excluded transitive install specs,
++		// without inventing a second (for example arm64) variant of a 32-bit HAL.
++		// Preserve the usual diagnostic if no supported variant exists at all.
++		if depType == overridden && !ctx.OtherModuleDependencyVariantExists(targetVariation, dep) {
++			for _, supported := range getSupportedTargets(ctx) {
++				variations := supported.Variations()
++				if ctx.OtherModuleDependencyVariantExists(append(variations, sharedVariation), dep) {
++					targetVariation = append(variations, sharedVariation)
++					break
++				} else if ctx.OtherModuleDependencyVariantExists(append(variations, rustLibDylibVariation), dep) {
++					targetVariation = append(variations, rustLibDylibVariation)
++					break
++				} else if ctx.OtherModuleDependencyVariantExists(variations, dep) {
++					targetVariation = variations
++					break
++				}
++			}
++		}
++
+ 		var depTagToUse blueprint.DependencyTag
+ 		switch depType {
+ 		case regular:
+diff --git a/android/packaging_test.go b/android/packaging_test.go
+index c50464e559468a5ba126a723723854dcac51c788..b049d8bebebb0b60c81bb8d738a3dbc19e8e85cb 100644
+--- a/android/packaging_test.go
++++ b/android/packaging_test.go
+@@ -714,3 +714,30 @@ func TestOverrides(t *testing.T) {
+ 		runPackagingTest(t, config, bp, tc.expected)
+ 	}
+ }
++
++// A cross-partition override must retain an exclusion dependency even when
++// the filesystem package normally collects only the primary (64-bit) target.
++func TestPackagingOverridden32BitBinaryInMultilibPackage(t *testing.T) {
++	for _, firstOnly := range []bool{false, true} {
++		expected := []string{"lib64/replacement"}
++		if !firstOnly {
++			expected = append(expected, "lib32/replacement")
++		}
++		runPackagingTest(t, testConfig{multiTarget: true, depsCollectFirstTargetOnly: firstOnly}, `
++			component {
++				name: "legacy",
++				compile_multilib: "32",
++			}
++			component {
++				name: "replacement",
++				compile_multilib: "both",
++			}
++			package_module {
++				name: "package",
++				compile_multilib: "both",
++				deps: ["replacement"],
++				overridden_deps: ["legacy"],
++			}
++		`, expected)
++	}
++}
+diff --git a/cmd/soong_build/main.go b/cmd/soong_build/main.go
+index 335d3d8f2e5ec8cf7a7c051ba6acd302374cd677..1ae58b69199ae03198043a9fa8493aead40fb6d3 100644
+--- a/cmd/soong_build/main.go
++++ b/cmd/soong_build/main.go
+@@ -22,6 +22,7 @@ import (
+ 	"os"
+ 	"path/filepath"
+ 	"runtime"
++	"runtime/debug"
+ 	"strings"
+ 	"time"
+ 
+@@ -313,9 +314,38 @@ func parseAvailableEnv() map[string]string {
+ 	return result
+ }
+ 
++func logHeapStats() {
++	f, err := os.OpenFile(filepath.Join(shared.JoinPath(topDir, cmdlineArgs.SoongOutDir), "soong_build.heap"),
++		os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
++	if err != nil {
++		fmt.Fprintf(os.Stderr, "cannot open Soong heap statistics: %v\n", err)
++		return
++	}
++	defer f.Close()
++	start := time.Now()
++	for {
++		var m runtime.MemStats
++		runtime.ReadMemStats(&m)
++		fmt.Fprintf(f, "t=%3.0fs alloc=%dMB inuse=%dMB sys=%dMB released=%dMB nextgc=%dMB numgc=%d gccpu=%.3f\n",
++			time.Since(start).Seconds(), m.HeapAlloc>>20, m.HeapInuse>>20, m.Sys>>20,
++			m.HeapReleased>>20, m.NextGC>>20, m.NumGC, m.GCCPUFraction)
++		time.Sleep(10 * time.Second)
++	}
++}
++
+ func main() {
+ 	flag.Parse()
+ 
++	// LOCAL TWEAK (not for upstream): keep the analysis heap bounded on a
++	// memory-limited build VM, and log heap stats for tuning.
++	if os.Getenv("GOGC") == "" {
++		debug.SetGCPercent(40)
++	}
++	if os.Getenv("GOMEMLIMIT") == "" {
++		debug.SetMemoryLimit(32 << 30)
++	}
++	go logHeapStats()
++
+ 	if cmdlineArgs.Memprofile == "" {
+ 		// Go enables memory profile collection automatically if any references
+ 		// are linked in to the binary.
+diff --git a/java/androidmk_test.go b/java/androidmk_test.go
+index 44426a05c44cde47499563f5ba3f8d41d76dab47..58adbd8cabe01e212877c576b488a77cd77d9312 100644
+--- a/java/androidmk_test.go
++++ b/java/androidmk_test.go
+@@ -327,3 +327,38 @@ func TestJniAsRequiredDeps(t *testing.T) {
+ 		android.AssertDeepEquals(t, "unexpected required deps", tc.expected, required)
+ 	}
+ }
++
++func TestPreferredPrebuiltJniMakeRequirement(t *testing.T) {
++	t.Parallel()
++	for _, prefer := range []string{"false", "true"} {
++		t.Run(prefer, func(t *testing.T) {
++			result := android.GroupFixturePreparers(prepareForJavaAndroidMkTest,
++				android.MockFS{"libjni.so": nil}.AddToFixture(),
++			).RunTestWithBp(t, cc.GatherRequiredDepsForTest(android.Android)+`
++				cc_library_shared {
++					name: "libjni",
++					system_shared_libs: [],
++					stl: "none",
++				}
++				cc_prebuilt_library_shared {
++					name: "libjni",
++					srcs: ["libjni.so"],
++					prefer: `+prefer+`,
++					system_shared_libs: [],
++					stl: "none",
++				}
++				android_app {
++					name: "jni_app",
++					platform_apis: true,
++					compile_multilib: "both",
++					jni_libs: ["libjni"],
++					use_embedded_native_libs: false,
++				}
++			`)
++			mod := result.ModuleForTests(t, "jni_app", "android_common").Module()
++			info := android.AndroidMkInfoForTest(t, result.TestContext, mod)
++			android.AssertDeepEquals(t, "JNI dependencies use the exported Make name",
++				[]string{"libjni:64", "libjni:32"}, info.PrimaryInfo.EntryMap["LOCAL_REQUIRED_MODULES"])
++		})
++	}
++}
+diff --git a/java/app.go b/java/app.go
+index 27dde0b4404d55535be02d23711b9339b6e97003..a97c565b8cb550788db6607e213a78604b4dc01a 100644
+--- a/java/app.go
++++ b/java/app.go
+@@ -1428,7 +1428,7 @@ func collectJniDeps(ctx android.ModuleContext,
+ 					}
+ 
+ 					jniLibs = append(jniLibs, jniLib{
+-						name:           ctx.OtherModuleName(module),
++						name:           commonInfo.BaseModuleName,
+ 						path:           path,
+ 						target:         commonInfo.Target,
+ 						coverageFile:   dep.CoverageOutputFile,
+diff --git a/scripts/check_boot_jars/package_allowed_list.txt b/scripts/check_boot_jars/package_allowed_list.txt
+index 335d29c59bb40f73fc98f5d866a1bd6247b2a6e9..6c9e8e4c3bc124e0a018c03cdfa27b32582a6f6e 100644
+--- a/scripts/check_boot_jars/package_allowed_list.txt
++++ b/scripts/check_boot_jars/package_allowed_list.txt
+@@ -244,3 +244,7 @@ qcom.fmradio
+ ###################################################
+ # IFAA Manager used for Alipay and/or WeChat payment
+ org\.ifaa\.android\.manager.*
++
++# Xiaomi MiSys HIDL packages actually present in cannon boot telephony DEX.
++vendor\.xiaomi\.hardware\.misys\.V1_0
++vendor\.xiaomi\.hardware\.misys\.V2_0
+diff --git a/ui/build/build.go b/ui/build/build.go
+index bf1c93b3162056dd001e19113f9225a21b92da33..c1a3d18229e8362b1ca00dba56dceb2668825701 100644
+--- a/ui/build/build.go
++++ b/ui/build/build.go
+@@ -17,11 +17,13 @@ package build
+ import (
+ 	"crypto/sha256"
+ 	"encoding/base64"
++	"encoding/json"
+ 	"fmt"
+ 	"io"
+ 	"io/ioutil"
+ 	"os"
+ 	"path/filepath"
++	"strings"
+ 	"sync"
+ 	"text/template"
+ 
+@@ -351,6 +353,15 @@ func Build(ctx Context, config Config) {
+ 
+ 	// Everything below here depends on product config.
+ 
++	if config.validatedGraph != "" {
++		required := RunProductConfig | RunSoong | RunKati | RunKatiNinja | RunNinja
++		if what&required != required || what&RunBuildTests != 0 ||
++			len(config.Arguments()) != 1 || config.Arguments()[0] != "bacon" ||
++			config.Environment().IsEnvTrue("_SOONG_INTERNAL_NO_FINDER") {
++			ctx.Fatalf("Validated graph requires a normal bacon invocation with product config and finder")
++		}
++	}
++
+ 	// Write SOONG_USE_PARTIAL_COMPILE so it can be sourced by rules that use it.
+ 	shFile := config.DeviceUsePartialCompile()
+ 	ensureDirectoriesExist(ctx, filepath.Dir(shFile))
+@@ -377,6 +388,16 @@ func Build(ctx Context, config Config) {
+ 	// the packaging step. Also, the kati suffix is used for the combined ninja file.
+ 	genKatiSuffix(ctx, config)
+ 
++	if config.validatedGraph != "" {
++		if err := validatePinnedGraph(config); err != nil {
++			ctx.Fatalf("Validated graph admission failed: %v", err)
++		}
++		ctx.Println("Validated stopped-cache graph admitted; retaining normal Ninja checks")
++		config.skipSoong = true
++		config.skipKati = true
++		what &^= RunSoong | RunKati
++	}
++
+ 	if what&RunSoong != 0 {
+ 		runSoong(ctx, config, what&RunBuildTests != 0)
+ 	}
+@@ -430,6 +451,107 @@ func Build(ctx Context, config Config) {
+ 	done = true
+ }
+ 
++type pinnedGraphManifest struct {
++	Version    int               `json:"version"`
++	Product    string            `json:"product"`
++	Variant    string            `json:"variant"`
++	KatiSuffix string            `json:"kati_suffix"`
++	Files      map[string]string `json:"files"`
++}
++
++func checkPinnedGraphFile(root, name, digest string) error {
++	if filepath.IsAbs(name) || filepath.Clean(name) != name || name == "." ||
++		name == ".." || strings.HasPrefix(name, ".."+string(filepath.Separator)) {
++		return fmt.Errorf("invalid cache path %q", name)
++	}
++	path := filepath.Join(root, name)
++	info, err := os.Lstat(path)
++	if os.IsNotExist(err) && digest == "" {
++		return nil
++	}
++	if err != nil {
++		return err
++	}
++	if digest == "" || !info.Mode().IsRegular() {
++		return fmt.Errorf("cache file presence/type changed: %s", name)
++	}
++	file, err := os.Open(path)
++	if err != nil {
++		return err
++	}
++	hash := sha256.New()
++	_, readErr := io.Copy(hash, file)
++	closeErr := file.Close()
++	if readErr != nil {
++		return readErr
++	}
++	if closeErr != nil {
++		return closeErr
++	}
++	if fmt.Sprintf("%x", hash.Sum(nil)) != digest {
++		return fmt.Errorf("cache digest changed: %s", name)
++	}
++	return nil
++}
++
++func validatePinnedGraph(config Config) error {
++	parts := strings.SplitN(config.validatedGraph, ":", 2)
++	if len(parts) != 2 || len(parts[0]) != 64 || !filepath.IsAbs(parts[1]) {
++		return fmt.Errorf("expected SHA256:absolute-manifest-path")
++	}
++	file, err := os.Open(parts[1])
++	if err != nil {
++		return err
++	}
++	data, readErr := io.ReadAll(io.LimitReader(file, 1024*1024+1))
++	closeErr := file.Close()
++	if readErr != nil {
++		return readErr
++	}
++	if closeErr != nil {
++		return closeErr
++	}
++	if len(data) > 1024*1024 || fmt.Sprintf("%x", sha256.Sum256(data)) != parts[0] {
++		return fmt.Errorf("manifest size/digest mismatch")
++	}
++	var manifest pinnedGraphManifest
++	if err := json.Unmarshal(data, &manifest); err != nil {
++		return err
++	}
++	product, err := config.TargetProductOrErr()
++	if err != nil {
++		return err
++	}
++	if manifest.Version != 1 || manifest.Product != product ||
++		manifest.Variant != config.TargetBuildVariant() || manifest.KatiSuffix != config.KatiSuffix() {
++		return fmt.Errorf("product/variant/Kati suffix mismatch")
++	}
++	for _, path := range []string{
++		config.CombinedNinjaFile(), config.KatiBuildNinjaFile(), config.KatiPackageNinjaFile(),
++		config.KatiEnvFile(), config.LastKatiSuffixFile(),
++		filepath.Join(config.SoongOutDir(), "build."+product+".ninja"),
++		filepath.Join(config.SoongOutDir(), "soong."+product+".variables"),
++		filepath.Join(config.SoongOutDir(), "soong."+product+".extra.variables"),
++		filepath.Join(config.FileListDir(), "Android.bp.list"),
++		filepath.Join(config.FileListDir(), "Android.mk.list"),
++		filepath.Join(config.FileListDir(), "CleanSpec.mk.list"),
++	} {
++		name, err := filepath.Rel(config.OutDir(), path)
++		if err != nil {
++			return err
++		}
++		if manifest.Files[name] == "" {
++			return fmt.Errorf("required cache file not pinned: %s", name)
++		}
++	}
++	for name, digest := range manifest.Files {
++		if err := checkPinnedGraphFile(config.OutDir(), name, digest); err != nil {
++			return err
++		}
++	}
++	return nil
++}
++
+ func createCompDbSymlink(ctx Context, config Config) {
+ 	if finalLinkDir, ok := config.environ.Get("SOONG_LINK_COMPDB_TO"); ok && finalLinkDir != "" {
+ 		finalLinkPath := filepath.Join(finalLinkDir, "compile_commands.json")
+diff --git a/ui/build/config.go b/ui/build/config.go
+index d2431f34a485ed3bcc440fb1112dd6f71438920e..3a173b4b2c099f5ff3e569134330dba4f136b4e1 100644
+--- a/ui/build/config.go
++++ b/ui/build/config.go
+@@ -111,6 +111,7 @@ type configImpl struct {
+ 	reportMkMetrics bool // Collect and report mk2bp migration progress metrics.
+ 	soongDocs       bool
+ 	skipConfig      bool
++	validatedGraph  string
+ 	// Either the user or product config requested that we skip soong (for the banner). The other
+ 	// skip flags tell whether *this* soong_ui invocation will skip kati - which will be true
+ 	// during lunch.
+@@ -1175,6 +1176,11 @@ func (c *configImpl) parseArgs(ctx Context, args []string) {
+ 			c.skipSoong = true
+ 		} else if arg == "--skip-config" {
+ 			c.skipConfig = true
++		} else if strings.HasPrefix(arg, "--validated-graph=") {
++			c.validatedGraph = strings.TrimPrefix(arg, "--validated-graph=")
++			if c.validatedGraph == "" {
++				ctx.Fatalf("--validated-graph requires a pinned manifest")
++			}
+ 		} else if arg == "--skip-soong-tests" {
+ 			c.skipSoongTests = true
+ 		} else if arg == "--no-skip-soong-tests" {
+diff --git a/ui/build/config_test.go b/ui/build/config_test.go
+index 3837bf38ee3bdb681b0255146bc265cad48ff58e..81cb1224b3bc78fe879bebf866e9809f25eefa2b 100644
+--- a/ui/build/config_test.go
++++ b/ui/build/config_test.go
+@@ -17,6 +17,7 @@ package build
+ import (
+ 	"bytes"
+ 	"context"
++	"crypto/sha256"
+ 	"fmt"
+ 	"io/ioutil"
+ 	"os"
+@@ -33,6 +34,35 @@ import (
+ 	"google.golang.org/protobuf/proto"
+ )
+ 
++func TestPinnedGraphFile(t *testing.T) {
++	root := t.TempDir()
++	path := filepath.Join(root, "graph.ninja")
++	data := []byte("subninja shard.ninja\n")
++	if err := os.WriteFile(path, data, 0600); err != nil {
++		t.Fatal(err)
++	}
++	digest := fmt.Sprintf("%x", sha256.Sum256(data))
++	if err := checkPinnedGraphFile(root, "graph.ninja", digest); err != nil {
++		t.Fatal(err)
++	}
++	for _, test := range []struct {
++		name, digest string
++	}{
++		{"graph.ninja", fmt.Sprintf("%064d", 0)},
++		{"missing.ninja", digest},
++		{"../graph.ninja", digest},
++		{path, digest},
++		{"graph.ninja", ""},
++	} {
++		if err := checkPinnedGraphFile(root, test.name, test.digest); err == nil {
++			t.Errorf("accepted changed or unsafe cache file %q", test.name)
++		}
++	}
++	if err := checkPinnedGraphFile(root, "missing.ninja", ""); err != nil {
++		t.Fatal(err)
++	}
++}
++
+ func testContext() Context {
+ 	return Context{&ContextImpl{
+ 		Context: context.Background(),
+diff --git a/ui/build/dumpvars.go b/ui/build/dumpvars.go
+index a4d34ec96385f74f26fe967329ed83fe5caa98da..7bed74212272d87b192ec939c5decadbe3bd7a36 100644
+--- a/ui/build/dumpvars.go
++++ b/ui/build/dumpvars.go
+@@ -22,6 +22,7 @@ import (
+ 	"slices"
+ 	"strconv"
+ 	"strings"
++	"time"
+ 
+ 	"android/soong/ui/metrics"
+ 	"android/soong/ui/status"
+@@ -120,6 +121,18 @@ func dumpMakeVars(ctx Context, config Config, goals, vars []string, tmpDir strin
+ 		"--kati_stats",
+ 		"dump-many-vars",
+ 		"MAKECMDGOALS="+strings.Join(goals, " "))
++	if config.validatedGraph != "" {
++		epoch, err := strconv.ParseInt(config.buildDateTime, 10, 64)
++		if err != nil {
++			return nil, fmt.Errorf("invalid cached BUILD_DATETIME: %w", err)
++		}
++		format := "20060102"
++		if config.Environment().IsEnvTrue("LINEAGE_VERSION_APPEND_TIME_OF_DAY") {
++			format += "_150405"
++		}
++		// Makefile assignments otherwise replace the frozen date with today's date.
++		cmd.Args = append(cmd.Args, "LINEAGE_BUILD_DATE="+time.Unix(epoch, 0).UTC().Format(format))
++	}
+ 	switch which {
+ 	case DUMPVARS_PRE_CONFIG:
+ 		cmd.Environment.Set("CALLED_PRE_PRODUCT_CONFIG", "true")
+diff --git a/ui/build/soong.go b/ui/build/soong.go
+index 4521b4abef559c568e568dc6c113d385339d14fd..10addffacd7ce2779268ed4b4ca07186a94e1ca7 100644
+--- a/ui/build/soong.go
++++ b/ui/build/soong.go
+@@ -215,6 +215,13 @@ func (pb PrimaryBuilderFactory) primaryBuilderInvocation(config Config) bootstra
+ 
+ 	commonArgs = append(commonArgs, "-l", filepath.Join(pb.config.FileListDir(), "Android.bp.list"))
+ 	invocationEnv := make(map[string]string)
++	// Host resource controls affect execution cost, not the generated graph.
++	// The graph builder starts with env -i, so inherit only these Go controls.
++	for _, key := range []string{"GOMEMLIMIT", "GOGC", "GOMAXPROCS"} {
++		if value, ok := pb.config.Environment().Get(key); ok {
++			invocationEnv[key] = value
++		}
++	}
+ 	if pb.debugPort != "" {
+ 		//debug mode
+ 		commonArgs = append(commonArgs, "--delve_listen", pb.debugPort,

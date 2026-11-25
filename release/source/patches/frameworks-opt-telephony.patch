@@ -1,0 +1,249 @@
+diff --git a/src/java/com/android/internal/telephony/RIL.java b/src/java/com/android/internal/telephony/RIL.java
+index afb99056ee9dbff744188c82a4951bdf2958d705..ec644b3a356bd6b316232f18fc4f58bf746af258 100644
+--- a/src/java/com/android/internal/telephony/RIL.java
++++ b/src/java/com/android/internal/telephony/RIL.java
+@@ -287,6 +287,14 @@ public class RIL extends BaseCommands implements CommandsInterface {
+     static final int EVENT_BLOCKING_RESPONSE_TIMEOUT = 5;
+     static final int EVENT_RADIO_PROXY_DEAD = 6;
+     static final int EVENT_AIDL_PROXY_DEAD = 7;
++    static final int EVENT_RETRY_RADIO_PROXY = 8;
++
++    // A declared HIDL IRadio that is not registered (rild stopped after a modem crash) would
++    // block getService(retry = true) forever on the phone main thread. Look it up without
++    // waiting and poll with backoff until it is registered.
++    private static final long RADIO_PROXY_RETRY_MIN_MS = 2000;
++    private static final long RADIO_PROXY_RETRY_MAX_MS = 60000;
++    private long mRadioProxyRetryMs = RADIO_PROXY_RETRY_MIN_MS;
+ 
+     //***** Constants
+ 
+@@ -405,6 +413,17 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                                 + serviceToString(aidlService));
+                     }
+                     break;
++
++                case EVENT_RETRY_RADIO_PROXY:
++                    if (getRadioProxy() != null) {
++                        riljLog("handleMessage: IRadio " + HIDL_SERVICE_NAME[mPhoneId]
++                                + " registered");
++                        mRadioProxyRetryMs = RADIO_PROXY_RETRY_MIN_MS;
++                        for (int s = MIN_SERVICE_IDX; s <= MAX_SERVICE_IDX; s++) {
++                            if (s != HAL_SERVICE_RADIO) getRadioServiceProxy(s);
++                        }
++                    }
++                    break;
+             }
+         }
+     }
+@@ -684,7 +703,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+             } else {
+                 try {
+                     mRadioProxy = android.hardware.radio.V1_6.IRadio.getService(
+-                            HIDL_SERVICE_NAME[mPhoneId], true);
++                            HIDL_SERVICE_NAME[mPhoneId], false);
+                     mHalVersion.put(HAL_SERVICE_RADIO, RADIO_HAL_VERSION_1_6);
+                 } catch (NoSuchElementException e) {
+                 }
+@@ -692,7 +711,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                 if (mRadioProxy == null) {
+                     try {
+                         mRadioProxy = android.hardware.radio.V1_5.IRadio.getService(
+-                                HIDL_SERVICE_NAME[mPhoneId], true);
++                                HIDL_SERVICE_NAME[mPhoneId], false);
+                         mHalVersion.put(HAL_SERVICE_RADIO, RADIO_HAL_VERSION_1_5);
+                     } catch (NoSuchElementException e) {
+                     }
+@@ -701,7 +720,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                 if (mRadioProxy == null) {
+                     try {
+                         mRadioProxy = android.hardware.radio.V1_4.IRadio.getService(
+-                                HIDL_SERVICE_NAME[mPhoneId], true);
++                                HIDL_SERVICE_NAME[mPhoneId], false);
+                         mHalVersion.put(HAL_SERVICE_RADIO, RADIO_HAL_VERSION_1_4);
+                     } catch (NoSuchElementException e) {
+                     }
+@@ -719,9 +738,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                         mRadioProxy.setResponseFunctions(mRadioResponse, mRadioIndication);
+                     }
+                 } else {
+-                    mDisabledRadioServices.get(HAL_SERVICE_RADIO).add(mPhoneId);
+-                    riljLoge("getRadioProxy: set mRadioProxy for "
+-                            + HIDL_SERVICE_NAME[mPhoneId] + " as disabled");
++                    scheduleRadioProxyRetry();
+                     return null;
+                 }
+             }
+@@ -731,13 +748,20 @@ public class RIL extends BaseCommands implements CommandsInterface {
+         }
+ 
+         if (mRadioProxy == null) {
+-            // getService() is a blocking call, so this should never happen
+             riljLoge("getRadioProxy: mRadioProxy == null");
+         }
+ 
+         return mRadioProxy;
+     }
+ 
++    private void scheduleRadioProxyRetry() {
++        if (mRilHandler == null || mRilHandler.hasMessages(EVENT_RETRY_RADIO_PROXY)) return;
++        riljLoge("IRadio " + HIDL_SERVICE_NAME[mPhoneId] + " not registered, retrying in "
++                + mRadioProxyRetryMs + " ms");
++        mRilHandler.sendEmptyMessageDelayed(EVENT_RETRY_RADIO_PROXY, mRadioProxyRetryMs);
++        mRadioProxyRetryMs = Math.min(mRadioProxyRetryMs * 2, RADIO_PROXY_RETRY_MAX_MS);
++    }
++
+     /**
+      * Returns a {@link RadioDataProxy}, {@link RadioMessagingProxy}, {@link RadioModemProxy},
+      * {@link RadioNetworkProxy}, {@link RadioSimProxy}, {@link RadioVoiceProxy},
+@@ -919,7 +943,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                         mHalVersion.put(service, RADIO_HAL_VERSION_1_6);
+                         serviceProxy.setHidl(mHalVersion.get(service),
+                                 android.hardware.radio.V1_6.IRadio.getService(
+-                                        HIDL_SERVICE_NAME[mPhoneId], true));
++                                        HIDL_SERVICE_NAME[mPhoneId], false));
+                     } catch (NoSuchElementException e) {
+                     }
+                 }
+@@ -930,7 +954,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                         mHalVersion.put(service, RADIO_HAL_VERSION_1_5);
+                         serviceProxy.setHidl(mHalVersion.get(service),
+                                 android.hardware.radio.V1_5.IRadio.getService(
+-                                        HIDL_SERVICE_NAME[mPhoneId], true));
++                                        HIDL_SERVICE_NAME[mPhoneId], false));
+                     } catch (NoSuchElementException e) {
+                     }
+                 }
+@@ -941,7 +965,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                         mHalVersion.put(service, RADIO_HAL_VERSION_1_4);
+                         serviceProxy.setHidl(mHalVersion.get(service),
+                                 android.hardware.radio.V1_4.IRadio.getService(
+-                                        HIDL_SERVICE_NAME[mPhoneId], true));
++                                        HIDL_SERVICE_NAME[mPhoneId], false));
+                     } catch (NoSuchElementException e) {
+                     }
+                 }
+@@ -1009,6 +1033,12 @@ public class RIL extends BaseCommands implements CommandsInterface {
+                                     mRadioResponse, mRadioIndication);
+                         }
+                     }
++                } else if (!isRadioServiceSupported(service)
++                        && mHalVersion.getOrDefault(HAL_SERVICE_RADIO, RADIO_HAL_VERSION_UNKNOWN)
++                                .less(RADIO_HAL_VERSION_2_0)) {
++                    // HIDL radio HAL not registered yet: EVENT_RETRY_RADIO_PROXY binds it later
++                    mHalVersion.put(service, RADIO_HAL_VERSION_UNKNOWN);
++                    scheduleRadioProxyRetry();
+                 } else {
+                     mDisabledRadioServices.get(service).add(mPhoneId);
+                     if (isRadioServiceSupported(service)) {
+@@ -1029,7 +1059,6 @@ public class RIL extends BaseCommands implements CommandsInterface {
+         }
+ 
+         if (serviceProxy.isEmpty()) {
+-            // getService() is a blocking call, so this should never happen
+             riljLoge("getRadioServiceProxy: serviceProxy == null");
+         }
+ 
+diff --git a/src/java/com/android/internal/telephony/gsm/GsmMmiCode.java b/src/java/com/android/internal/telephony/gsm/GsmMmiCode.java
+index 39e3994b7072ac798471f9af55978fd069495a38..801a346c21902577bd13d6144bc99f271c35a9e1 100644
+--- a/src/java/com/android/internal/telephony/gsm/GsmMmiCode.java
++++ b/src/java/com/android/internal/telephony/gsm/GsmMmiCode.java
+@@ -75,7 +75,7 @@ import java.util.regex.Pattern;
+  * @hide
+  *
+  */
+-public final class GsmMmiCode extends Handler implements MmiCode {
++public class GsmMmiCode extends Handler implements MmiCode {
+     static final String LOG_TAG = "GsmMmiCode";
+ 
+     //***** Constants
+diff --git a/src/java/com/android/internal/telephony/gsm/GsmSMSDispatcher.java b/src/java/com/android/internal/telephony/gsm/GsmSMSDispatcher.java
+index 3c4b5111f2c358ad93c5646ecf0f7ec1c39d6fb4..0b18d52a97cea7f320282f45d8a515440c47179e 100644
+--- a/src/java/com/android/internal/telephony/gsm/GsmSMSDispatcher.java
++++ b/src/java/com/android/internal/telephony/gsm/GsmSMSDispatcher.java
+@@ -46,7 +46,7 @@ import com.android.telephony.Rlog;
+ import java.util.HashMap;
+ import java.util.concurrent.atomic.AtomicReference;
+ 
+-public final class GsmSMSDispatcher extends SMSDispatcher {
++public class GsmSMSDispatcher extends SMSDispatcher {
+     private static final String TAG = "GsmSMSDispatcher";
+     protected UiccController mUiccController = null;
+     private AtomicReference<IccRecords> mIccRecords = new AtomicReference<IccRecords>();
+diff --git a/src/java/com/android/internal/telephony/imsphone/ImsPhoneMmiCode.java b/src/java/com/android/internal/telephony/imsphone/ImsPhoneMmiCode.java
+index 6dcbcfaf38ce7079706f78f4446c81004d8ba57f..a1cac7e776d3e73d01389952b0773440f8878fff 100644
+--- a/src/java/com/android/internal/telephony/imsphone/ImsPhoneMmiCode.java
++++ b/src/java/com/android/internal/telephony/imsphone/ImsPhoneMmiCode.java
+@@ -82,7 +82,7 @@ import java.util.regex.Pattern;
+  * @hide
+  *
+  */
+-public final class ImsPhoneMmiCode extends Handler implements MmiCode {
++public class ImsPhoneMmiCode extends Handler implements MmiCode {
+     static final String LOG_TAG = "ImsPhoneMmiCode";
+ 
+     //***** Constants
+diff --git a/src/java/com/android/internal/telephony/uicc/CsimFileHandler.java b/src/java/com/android/internal/telephony/uicc/CsimFileHandler.java
+index e86f4e7a32b42033a3ba1c7b64431e21dd295ade..d27185d1e2ec5b24029355e9e569f6648928aced 100644
+--- a/src/java/com/android/internal/telephony/uicc/CsimFileHandler.java
++++ b/src/java/com/android/internal/telephony/uicc/CsimFileHandler.java
+@@ -23,7 +23,7 @@ import com.android.telephony.Rlog;
+  * @hide
+  * This class should be used to access files in CSIM ADF
+  */
+-public final class CsimFileHandler extends IccFileHandler implements IccConstants {
++public class CsimFileHandler extends IccFileHandler implements IccConstants {
+     static final String LOG_TAG = "CsimFH";
+ 
+     public CsimFileHandler(UiccCardApplication app, String aid, CommandsInterface ci) {
+diff --git a/src/java/com/android/internal/telephony/uicc/IsimFileHandler.java b/src/java/com/android/internal/telephony/uicc/IsimFileHandler.java
+index a88cc26f30a02f979bfec32a653b12fcf90086b7..c79c7aba83474f4d75e44ea1ac4260eb43384633 100644
+--- a/src/java/com/android/internal/telephony/uicc/IsimFileHandler.java
++++ b/src/java/com/android/internal/telephony/uicc/IsimFileHandler.java
+@@ -23,7 +23,7 @@ import com.android.telephony.Rlog;
+  * @hide
+  * This class should be used to access files in ISIM ADF
+  */
+-public final class IsimFileHandler extends IccFileHandler implements IccConstants {
++public class IsimFileHandler extends IccFileHandler implements IccConstants {
+     static final String LOG_TAG = "IsimFH";
+ 
+     public IsimFileHandler(UiccCardApplication app, String aid, CommandsInterface ci) {
+diff --git a/src/java/com/android/internal/telephony/uicc/RuimFileHandler.java b/src/java/com/android/internal/telephony/uicc/RuimFileHandler.java
+index 37d7702f6dc815bab4c4c5b73b7eb529f0067fb0..f8c667cca9af346d67df572df48da8c7cb8d9670 100644
+--- a/src/java/com/android/internal/telephony/uicc/RuimFileHandler.java
++++ b/src/java/com/android/internal/telephony/uicc/RuimFileHandler.java
+@@ -24,7 +24,7 @@ import com.android.telephony.Rlog;
+ /**
+  * @hide
+  */
+-public final class RuimFileHandler extends IccFileHandler {
++public class RuimFileHandler extends IccFileHandler {
+     static final String LOG_TAG = "RuimFH";
+ 
+     //***** Instance Variables
+diff --git a/src/java/com/android/internal/telephony/uicc/SIMFileHandler.java b/src/java/com/android/internal/telephony/uicc/SIMFileHandler.java
+index 9cd90e1c2cdb3712fc5cc857e94653c9b9b25006..f00fd93198b0452c1f885b84d7a632355eb01821 100644
+--- a/src/java/com/android/internal/telephony/uicc/SIMFileHandler.java
++++ b/src/java/com/android/internal/telephony/uicc/SIMFileHandler.java
+@@ -22,7 +22,7 @@ import com.android.telephony.Rlog;
+ /**
+  * @hide
+  */
+-public final class SIMFileHandler extends IccFileHandler implements IccConstants {
++public class SIMFileHandler extends IccFileHandler implements IccConstants {
+     static final String LOG_TAG = "SIMFileHandler";
+ 
+     //***** Instance Variables
+diff --git a/src/java/com/android/internal/telephony/uicc/UsimFileHandler.java b/src/java/com/android/internal/telephony/uicc/UsimFileHandler.java
+index 27093e1e4230b417cbb836fdc109562dccb6f86a..7b2aca251b24b3156c4bb7757fcc5ddbda4fae43 100644
+--- a/src/java/com/android/internal/telephony/uicc/UsimFileHandler.java
++++ b/src/java/com/android/internal/telephony/uicc/UsimFileHandler.java
+@@ -23,7 +23,7 @@ import com.android.telephony.Rlog;
+  * @hide
+  * This class should be used to access files in USIM ADF
+  */
+-public final class UsimFileHandler extends IccFileHandler implements IccConstants {
++public class UsimFileHandler extends IccFileHandler implements IccConstants {
+     static final String LOG_TAG = "UsimFH";
+ 
+     public UsimFileHandler(UiccCardApplication app, String aid, CommandsInterface ci) {

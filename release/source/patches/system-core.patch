@@ -1,0 +1,192 @@
+diff --git a/init/util.cpp b/init/util.cpp
+index 6241b6617cb56b03b6b772da33ab0d9ead4d1331..9e9f0a754900bccbd8b3469f87d66afd99e242ab 100644
+--- a/init/util.cpp
++++ b/init/util.cpp
+@@ -33,6 +33,10 @@
+ 
+ #include <format>
+ #include <map>
++#include <mutex>
++#include <grp.h>
++#include <signal.h>
++#include <sys/wait.h>
+ #include <thread>
+ 
+ #include <android-base/file.h>
+@@ -40,6 +44,7 @@
+ #include <android-base/properties.h>
+ #include <android-base/scopeguard.h>
+ #include <android-base/strings.h>
++#include <android-base/stringprintf.h>
+ #include <android-base/unique_fd.h>
+ #include <cutils/sockets.h>
+ #include <selinux/android.h>
+@@ -665,9 +670,129 @@ void SetStdioToDevNull(char** argv) {
+     if (fd > STDERR_FILENO) close(fd);
+ }
+ 
++// Temporary cannong diagnostic. No policy relaxation: reopen the precreated
++// OS-cache file in each init stage's own SELinux context. Never follow symlinks,
++// create files, touch raw blocks, or exceed the bounded diagnostic file size.
++static void CannongCacheLogger(android::base::LogId, android::base::LogSeverity,
++                               const char* tag, const char*, unsigned int,
++                               const char* message) {
++    [[clang::no_destroy]] static std::mutex cache_log_mutex;
++    std::unique_lock<std::mutex> guard(cache_log_mutex, std::try_to_lock);
++    if (!guard.owns_lock()) return;
++    int fd = open("/cache/cannong-init-native.log", O_WRONLY | O_CLOEXEC | O_NOFOLLOW);
++    if (fd < 0) return;
++    struct stat file_info {}, block_info {};
++    if (fstat(fd, &file_info) == 0 && S_ISREG(file_info.st_mode) &&
++        file_info.st_uid == 0 && file_info.st_nlink == 1 && file_info.st_size < 1048576 &&
++        stat("/dev/block/by-name/cache", &block_info) == 0 && S_ISBLK(block_info.st_mode) &&
++        file_info.st_dev == block_info.st_rdev && lseek(fd, 0, SEEK_END) >= 0) {
++        auto line = android::base::StringPrintf("[init-cache pid=%d] %s: %s\n", getpid(),
++                                                tag ? tag : "init", message);
++        size_t available = static_cast<size_t>(1048576 - file_info.st_size);
++        if (available > 4096) available = 4096;
++        if (line.size() > available) line.resize(available);
++        TEMP_FAILURE_RETRY(write(fd, line.data(), line.size()));
++        fdatasync(fd);
++    }
++    close(fd);
++}
++
++
++// BEGIN CANNONG_BOUNDED_LOGCAT
++// Temporary diagnostics: logcat transitions through the stock logpersist rule;
++// only this init-domain reader writes the precreated fixed OS-cache log.
++static size_t CannongCopyLogBytes(int out, const char* data, size_t size, size_t used) {
++    constexpr size_t limit = 2097152;
++    size_t remaining = used < limit ? limit - used : 0;
++    if (size > remaining) size = remaining;
++    while (size) {
++        ssize_t n = TEMP_FAILURE_RETRY(write(out, data, size));
++        if (n <= 0) break;
++        data += n; size -= n; used += n;
++    }
++    return used;
++}
++
++static void CannongStartLogcatCapture() {
++    if (getpid() != 1) return;
++    int out = open("/cache/cannong-logcat-native.log", O_WRONLY | O_CLOEXEC | O_NOFOLLOW);
++    if (out < 0) return;
++    struct stat file {}, block {};
++    if (fstat(out, &file) || !S_ISREG(file.st_mode) || file.st_uid != 0 ||
++        file.st_nlink != 1 || file.st_size > 2097152 ||
++        stat("/dev/block/by-name/cache", &block) || !S_ISBLK(block.st_mode) ||
++        file.st_dev != block.st_rdev || lseek(out, 0, SEEK_END) < 0) {
++        close(out); return;
++    }
++    pid_t reader = fork();
++    if (reader != 0) { close(out); return; }
++    // A diagnostic child must never inherit PID1's fatal-reboot handlers.
++    for (int sig : {SIGABRT, SIGBUS, SIGFPE, SIGILL, SIGSEGV, SIGSYS, SIGALRM, SIGTERM, SIGCHLD})
++        signal(sig, SIG_DFL);
++    alarm(110);
++    for (int i = 0; i < 300 && access("/dev/socket/logdr", F_OK); ++i) usleep(100000);
++    usleep(300000);
++    int fds[2];
++    if (pipe2(fds, O_CLOEXEC | O_NONBLOCK)) _exit(70);
++    pid_t logger = fork();
++    if (logger < 0) _exit(71);
++    if (logger == 0) {
++        close(fds[0]); close(out);
++        fcntl(fds[1], F_SETFL, fcntl(fds[1], F_GETFL) & ~O_NONBLOCK);
++        if (dup2(fds[1], STDOUT_FILENO) < 0 || dup2(fds[1], STDERR_FILENO) < 0) _exit(72);
++        close(fds[1]);
++        // Match stock logcatd's DAC identity. Authentication is unchanged.
++        gid_t groups[] = {1007};
++        if (setgroups(1, groups) || setgid(1007) || setuid(1036)) _exit(73);
++        execl("/system/bin/logcat", "logcat", "-b", "all", "-v", "threadtime",
++              "*:E", "DEBUG:V", "libc:V", "SurfaceFlinger:V", "RenderEngine:V",
++              "powerhal-libperfmgr:V", static_cast<char*>(nullptr));
++        _exit(74);
++    }
++    close(fds[1]);
++    const char start[] = "CANNONG_LOGCAT_READER_STARTED\n";
++    size_t used = CannongCopyLogBytes(out, start, sizeof(start)-1, file.st_size);
++    struct timespec began {}, current {};
++    clock_gettime(CLOCK_MONOTONIC, &began);
++    for (;;) {
++        char data[8192]; ssize_t n = read(fds[0], data, sizeof(data));
++        if (n > 0) { used = CannongCopyLogBytes(out, data, n, used); fdatasync(out); }
++        if (n == 0) break;
++        if (n < 0 && errno != EAGAIN && errno != EINTR) break;
++        clock_gettime(CLOCK_MONOTONIC, &current);
++        if (current.tv_sec - began.tv_sec >= 90) break;
++        if (n < 0) usleep(50000);
++    }
++    // Only our own logcat child is signalled; init and other services unaffected.
++    int status = 0;
++    if (waitpid(logger, &status, WNOHANG) == 0) {
++        kill(logger, SIGTERM); usleep(100000);
++        if (waitpid(logger, &status, WNOHANG) == 0) {
++            kill(logger, SIGKILL); TEMP_FAILURE_RETRY(waitpid(logger, &status, 0));
++        }
++    }
++    char result[128];
++    int result_size = snprintf(result, sizeof(result), "\nCANNONG_LOGCAT_CHILD_STATUS=%d\n", status);
++    if (result_size > 0 && result_size < static_cast<int>(sizeof(result)))
++        used = CannongCopyLogBytes(out, result, result_size, used);
++    const char end[] = "\nCANNONG_LOGCAT_READER_FINISHED\n";
++    CannongCopyLogBytes(out, end, sizeof(end)-1, used); fdatasync(out);
++    close(fds[0]); close(out); _exit(0);
++}
++// END CANNONG_BOUNDED_LOGCAT
++
+ void InitKernelLogging(char** argv) {
+     SetFatalRebootTarget();
+-    android::base::InitLogging(argv, &android::base::KernelLogger, InitAborter);
++    std::string cmdline;
++    android::base::ReadFileToString("/proc/cmdline", &cmdline);
++    if (cmdline.find("androidboot.cannong_init_log=1") != std::string::npos) {
++        android::base::InitLogging(argv,
++                android::base::TeeLogger(&android::base::KernelLogger, &CannongCacheLogger),
++                InitAborter);
++        if (argv && argv[1] && !strcmp(argv[1], "second_stage")) CannongStartLogcatCapture();
++    } else {
++        android::base::InitLogging(argv, &android::base::KernelLogger, InitAborter);
++    }
+ }
+ 
+ bool IsRecoveryMode() {
+diff --git a/libcutils/ashmem-dev.cpp b/libcutils/ashmem-dev.cpp
+index 4d3a70ac8aaaf998a13ec8df3223995bac257231..6ce998cc8613e841cebc4a71514dca2ccf4a1db5 100644
+--- a/libcutils/ashmem-dev.cpp
++++ b/libcutils/ashmem-dev.cpp
+@@ -197,14 +197,17 @@ static int __ashmem_check_failure(int fd, int result) {
+ static bool is_memfd_fd(int fd) {
+     std::string fd_path = android::base::StringPrintf("/proc/self/fd/%d", fd);
+     std::string result;
+-    if (!android::base::Readlink(fd_path, &result)) {
++    if (android::base::Readlink(fd_path, &result)) {
++        if (!result.starts_with("/memfd:")) {
++            return false;
++        }
++    } else if (errno != EPERM && errno != EACCES) {
+         ALOGE("readlink(%s) failed: %m", fd_path.c_str());
+         return false;
+     }
+-
+-    if (!result.starts_with("/memfd:")) {
+-        return false;
+-    }
++    // Sandboxed processes (e.g. WebView renderers) may not be allowed to
++    // readlink /proc/self/fd; only shmem-backed memfds support sealing, so
++    // the seal check below is sufficient in that case.
+ 
+     // b/498720726: Ensure that the memfd has the same restrictions on its size that an ashmem fd
+     // would. Otherwise, memfds that aren't sealed against size changes can be treated as valid
+@@ -212,7 +215,9 @@ static bool is_memfd_fd(int fd) {
+     // process is using it, leading to time of check to time of use issues.
+     int seals = fcntl(fd, F_GET_SEALS);
+     if (seals == -1) {
+-        ALOGE("is_memfd_fd(%d): F_GET_SEALS failed: %m", fd);
++        if (errno != EINVAL) {
++            ALOGE("is_memfd_fd(%d): F_GET_SEALS failed: %m", fd);
++        }
+         return false;
+     }
+ 

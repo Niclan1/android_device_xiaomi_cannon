@@ -57,8 +57,6 @@ vendor/lib64/libmiStereoFactoryRemapLib.so
 # Audio configs
 vendor/etc/apdb/APDB_MT6853_S01__W2145
 vendor/etc/apdb/APDB_MT6853_S01__W2145_ENUM
-vendor/etc/audio_param/AudioParamOptions.xml
-vendor/etc/audio_param/AudioParamOptions_vext.xml
 vendor/etc/audio_param/BtInfo_AudioParam.xml
 vendor/etc/audio_param/BtInfo_ParamUnitDesc.xml
 vendor/etc/audio_param/HpImpedance_AudioParam.xml
@@ -799,7 +797,7 @@ vendor/lib/libged.so
 vendor/lib/libgpu_aux.so
 vendor/lib/libgpud.so
 vendor/lib/libgpudataproducer.so
-vendor/lib/libgralloc_extra.so
+vendor/lib/libgralloc_extra.so:vendor/lib/libgralloc_extra_cannon_legacy.so;FIX_SONAME
 vendor/lib/libgralloc_metadata.so
 vendor/lib/libgralloctypes_mtk.so
 vendor/lib/libion_mtk.so
@@ -856,7 +854,7 @@ vendor/lib64/libged.so
 vendor/lib64/libgpu_aux.so
 vendor/lib64/libgpud.so
 vendor/lib64/libgpudataproducer.so
-vendor/lib64/libgralloc_extra.so
+vendor/lib64/libgralloc_extra.so:vendor/lib64/libgralloc_extra_cannon_legacy.so;FIX_SONAME
 vendor/lib64/libgralloc_metadata.so
 vendor/lib64/libgralloctypes_mtk.so
 vendor/lib64/libion_mtk.so
@@ -1125,8 +1123,6 @@ vendor/lib64/libteeclientjni@1.1.so
 vendor/lib64/wechat.beanpod.so
 
 # Power
-vendor/etc/cgroups.json
-vendor/etc/task_profiles.json
 vendor/lib64/libpowerhalwrap_vendor.so
 vendor/lib64/vendor.mediatek.hardware.power@1.1.so
 vendor/lib64/vendor.mediatek.hardware.power@2.0.so
@@ -1296,7 +1292,7 @@ vendor/lib64/vendor.microtrust.hardware.soter@1.0.so
 vendor/lib/hw/sound_trigger.primary.default.so:vendor/lib/hw/sound_trigger.primary.mt6853.so;FIX_SONAME
 
 # Thermal
-system_root/init.mi_thermald.rc:vendor/etc/init/init.mi_thermald.rc
+-system_root/init.mi_thermald.rc:vendor/etc/init/init.mi_thermald.rc
 vendor/bin/hw/android.hardware.thermal@2.0-service.mtk
 vendor/bin/mi_thermald
 vendor/bin/thermal
@@ -1377,10 +1373,8 @@ vendor/bin/lbs_hidl_service
 vendor/bin/mnld
 vendor/bin/mtk_agpsd
 vendor/etc/init/android.hardware.gnss-service.mediatek.rc
-vendor/etc/init/init.gps_drv.rc
 vendor/etc/init/lbs_hidl_service.rc
 vendor/etc/init/mtk_agpsd_p.rc
--vendor/etc/vintf/manifest/gnss@2.1-service.xml:vendor/etc/vintf/manifest/android.hardware.gnss@2.1-service-mediatek.xml
 -vendor/etc/vintf/manifest/lbs_hidl_service@1.0.xml
 vendor/etc/mpe.conf
 vendor/etc/slp_conf

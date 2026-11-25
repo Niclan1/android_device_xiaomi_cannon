@@ -1,0 +1,5 @@
+{
+    "name": "com.xiaomi.cannon.gralloc",
+    "version": 1,
+    "vendorBootstrap": true
+}

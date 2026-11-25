@@ -1,0 +1,12 @@
+diff --git a/base/vendor/file_contexts b/base/vendor/file_contexts
+index e080096692ce6064ffbd2475735333876b7e814f..e3396f04c577deef99220f1cb6c4e505b94d2bdf 100644
+--- a/base/vendor/file_contexts
++++ b/base/vendor/file_contexts
+@@ -767,7 +767,6 @@
+ /dev/teei_loader u:object_r:tee_device:s0
+ 
+ # microtrust lite version use end
+-/dev/dri/card0 u:object_r:dri_device:s0
+ 
+ /dev/ttyC5     u:object_r:nwkopt_device:s0
+ /dev/mix_event u:object_r:tx_device:s0

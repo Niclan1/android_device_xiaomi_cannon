@@ -20,3 +20,22 @@ vendor.sys.thermal.                                     u:object_r:vendor_therma
 
 # Mlipay
 persist.vendor.sys.pay                                  u:object_r:vendor_payment_security_prop:s0
+
+# Graphics stack (set by libinit)
+ro.vendor.cannon.gfx                                    u:object_r:vendor_cannon_gfx_prop:s0 exact enum legacy mainline
+
+# Video codec backend (set by libinit)
+ro.vendor.cannon.vcodec                                 u:object_r:vendor_cannon_gfx_prop:s0 exact enum hw sw
+
+# Kernel flavour (set by libinit)
+ro.vendor.cannon.kernel                                 u:object_r:vendor_cannon_gfx_prop:s0 exact enum legacy mainline
+
+# Graphics debug knobs (gralloc mapper / Mesa, read by all processes)
+vendor.minigbm.                                         u:object_r:vendor_graphics_debug_prop:s0
+vendor.mesa.                                            u:object_r:vendor_graphics_debug_prop:s0
+
+# Bound native battery backend, selected before init actions.
+ro.vendor.cannon.gauge                                  u:object_r:vendor_cannon_gauge_prop:s0 exact enum upstream
+
+# Legacy mnld almanac selection.
+vendor.gps.almanac u:object_r:vendor_mtk_mnld_prop:s0 exact string

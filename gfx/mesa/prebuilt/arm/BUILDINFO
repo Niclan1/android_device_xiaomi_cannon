@@ -1,0 +1,10 @@
+mesa 26.2.6
+gallium_gles_ndk r28c (api 34)
+gallium panfrost, static libdrm/expat, EGL/GLES suffix _mesa
+egl compiler clang-r596125 (Clang22.0.2), target api 34, existing CRT api 31
+egl static libdrm 2.4.133, guarded NV12/YV12 import
+egl_mesa_source_sha256 b9436b3e1a8be76fbd4823dc884f90596ab7c6ac5e1867a305e66ffccfb31a92
+egl_libdrm_source_sha256 fc68f9d0ba2ea63c9432a299e14fea09fad7a8a66e8039fcd7802ca59f77b4f5
+egl_payload_sha256 ad489c1fe770a68f0d90cb055a6603e1926753ab1e0dfc26193c1742cf5cb68f
+egl_camera_patch_sha256 e5bc3bb7a9b4e68dad9f0daaee6b11e67f1dde77b9046f02c446354b00fc490f
+egl_yv12_patch_sha256 2aedf29c597640d9354b00c1aaef1711dc5efcbf097ffa2af8e44b19cb279b12

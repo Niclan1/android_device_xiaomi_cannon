@@ -1,0 +1,3 @@
+# Video telephony FMQ buffers from the media stack. With sys.use_memfd
+# they are memfds, which show up as plain tmpfs files.
+allow { vtservice vtservice_hidl } tmpfs:file { read write map getattr };

@@ -1,0 +1,811 @@
+diff --git a/aidl/fingerprint/Fingerprint.cpp b/aidl/fingerprint/Fingerprint.cpp
+index cf98a29689143bb2bce38a961db980719779a651..df65e67308bf00ffb395e5ecf0a533e486ccb1ae 100644
+--- a/aidl/fingerprint/Fingerprint.cpp
++++ b/aidl/fingerprint/Fingerprint.cpp
+@@ -210,6 +210,12 @@ void Fingerprint::notify(const fingerprint_msg_t* msg) {
+ }
+ 
+ ndk::ScopedAStatus Fingerprint::getSensorProps(std::vector<SensorProps>* out) {
++    if (!mDevice) {
++        ALOGE("No fingerprint HAL device opened; no sensors available");
++        out->clear();
++        return ndk::ScopedAStatus::ok();
++    }
++
+     std::vector<common::ComponentInfo> componentInfo = {
+             {HW_COMPONENT_ID, HW_VERSION, FW_VERSION, SERIAL_NUMBER, "" /* softwareVersion */},
+             {SW_COMPONENT_ID, "" /* hardwareVersion */, "" /* firmwareVersion */,
+@@ -242,6 +248,10 @@ ndk::ScopedAStatus Fingerprint::getSensorProps(std::vector<SensorProps>* out) {
+ ndk::ScopedAStatus Fingerprint::createSession(int32_t /*sensorId*/, int32_t userId,
+                                               const std::shared_ptr<ISessionCallback>& cb,
+                                               std::shared_ptr<ISession>* out) {
++    if (!mDevice) {
++        ALOGE("createSession: fingerprint HAL device unavailable");
++        return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_STATE);
++    }
+     CHECK(mSession == nullptr || mSession->isClosed()) << "Open session already exists!";
+ 
+     mSession = SharedRefBase::make<Session>(mDevice, mUdfpsHandler, userId, cb, mLockoutTracker);
+diff --git a/aidl/fingerprint/android.hardware.biometrics.fingerprint-service.xiaomi.rc b/aidl/fingerprint/android.hardware.biometrics.fingerprint-service.xiaomi.rc
+index 89d1c3e0e627f99118999d5e3175910fc14e580c..2e054a97a912321eaee48eefa91dfb9adc241176 100644
+--- a/aidl/fingerprint/android.hardware.biometrics.fingerprint-service.xiaomi.rc
++++ b/aidl/fingerprint/android.hardware.biometrics.fingerprint-service.xiaomi.rc
+@@ -5,5 +5,6 @@ service vendor.fingerprint-default /vendor/bin/hw/android.hardware.biometrics.fi
+     class late_start
+     user system
+     group system input uhid
++    interface aidl android.hardware.biometrics.fingerprint.IFingerprint/default
+     capabilities SYS_NICE
+     shutdown critical
+diff --git a/packages/EsimSwitcher/res/values-zh-rHK/strings.xml b/packages/EsimSwitcher/res/values-zh-rHK/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..07b68335bb1da5bb1ea2e1cb8c35a8f4a7089313
+--- /dev/null
++++ b/packages/EsimSwitcher/res/values-zh-rHK/strings.xml
+@@ -0,0 +1,13 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: 2023-2025 Paranoid Android
++     SPDX-FileCopyrightText: 2026 The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">eSIM 切換工具</string>
++    <string name="esim_title">eSIM</string>
++    <string name="esim_enable_name">啟用 eSIM</string>
++    <string name="esim_warning_title">正在使用 eSIM</string>
++    <string name="esim_footer_note">啟用 eSIM 將會停用第二個實體 SIM 卡槽。</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-az/strings.xml b/packages/RemoteButtons/res/values-az/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..c57060354399109158d011d78898fd52a81836ee
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-az/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Pult düymələri</string>
++    <string name="settings_title">Pult düymələrini qur</string>
++    <string name="permission_needed">Pultu proqramlaşdırmaq üçün Bluetooth izni lazımdır.</string>
++    <string name="welcome_description">Pult, infraqırmızı şüa istifadə edərək TV-inizi, səs panelinizi və ya qəbuledicinizi yandıra və ya söndürə və səs həcmini dəyişdirə bilər.</string>
++    <string name="status_configured">%1$s üçün qur.</string>
++    <string name="status_not_configured">Hələ heç nə qurulmayıb.</string>
++    <string name="action_set_up">Qur</string>
++    <string name="action_clear">Təmiz quraşdırma</string>
++    <string name="notice_title">TV-nizi bu pultla idarə edin</string>
++    <string name="notice_description">Kodlar tək-tək sınanacaq. Hər cəhd zamanı musiqi oxudulur ki, pultun səs həcmini dəyişdirib-dəyişdirmədiyini eşidə biləsiniz. Səsin tam kəsilmədiyinə əmin olun.</string>
++    <string name="device_type_title">Pult nə edir?</string>
++    <string name="device_type_tv">Sadəcə TV-im</string>
++    <string name="device_type_soundbar">Səs paneli</string>
++    <string name="device_type_receiver">Qəbuledici</string>
++    <string name="brand_title_tv">TV-inizin markası nədir?</string>
++    <string name="brand_title_soundbar">Səs panelinizin markası nədir?</string>
++    <string name="brand_title_receiver">Qəbuledicinizin markası nədir?</string>
++    <string name="pairing_programming">Kodlar pulta göndərilir…</string>
++    <string name="pairing_title">Həcm düymələrini sına</string>
++    <string name="pairing_description">Pultu cihazınıza tutun və \"Vol+\" və ya \"Vol-\" düymələrinə basın. Musiqinin səs həcmi dəyişir?</string>
++    <string name="pairing_attempt">Kod dəsti %1$d/%2$d</string>
++    <string name="pairing_error_title">Pult proqramlaşdırıla bilmədi</string>
++    <string name="pairing_error_description">Pultun cütləşdirildiyinə və yaxında olduğuna əmin olun. (%1$s)</string>
++    <string name="code_set_item">Kod dəsti %1$d</string>
++    <string name="action_yes">Bəli</string>
++    <string name="action_no">Xeyr, növbətini sına</string>
++    <string name="action_choose_code_set">Kod ayarlamanı seç</string>
++    <string name="action_try_again">Yenidən sına</string>
++    <string name="action_skip">Bu kod dəstini ötür</string>
++    <string name="action_other_brand">Başqa bir marka seç</string>
++    <string name="done_title">Pultunuz artıq %1$s cihazınızı idarə edə bilir</string>
++    <string name="done_description">Güc və həcm düymələri infraqırmızı əmrlər göndərir.</string>
++    <string name="failed_title">Heç bir %1$s kod dəsti işləmədi</string>
++    <string name="failed_description">Onları yenidən sınaya və ya başqa bir marka seçə bilərsiniz: bəzi cihazlar bir neçə ad altında satılır</string>
++    <string name="clear_title">Pultun infraqırmızı quraşdırması təmizlənsin?</string>
++    <string name="clear_description">Pultdan infraqırmızı kodları, o cümlədən digər tətbiqlər tərəfindən qurulmuş kodları silir. Pult yenidən qurulana qədər cihazınızı idarə etməyi dayandıracaq.</string>
++    <string name="clear_done">Pult quraşdırması təmizləndi</string>
++    <string name="clear_failed">Pult əlçatan deyil</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-ca/strings.xml b/packages/RemoteButtons/res/values-ca/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..49640e54cd027c5eb4cfad5bcf910ccf7a23e2a2
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-ca/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Botons del comandament</string>
++    <string name="settings_title">Configuració dels botons del comandament</string>
++    <string name="permission_needed">Cal el permís de Bluetooth per programar el comandament.</string>
++    <string name="welcome_description">El comandament pot encendre i apagar el televisor, barra de so o receptor, i ajustar-ne el volum mitjançant infrarojos.</string>
++    <string name="status_configured">Configuració per a %1$s.</string>
++    <string name="status_not_configured">Encara no hi ha res configurat.</string>
++    <string name="action_set_up">Configura</string>
++    <string name="action_clear">Esborra la configuració</string>
++    <string name="notice_title">Controleu el televisor amb aquest comandament</string>
++    <string name="notice_description">Els codis s\'aniran provant un per un. Mentre es prova cadascun, sonarà música perquè pugueu sentir si el comandament canvia el volum. Assegureu-vos que el so no estigui silenciat.</string>
++    <string name="device_type_title">Què hauria de controlar el comandament?</string>
++    <string name="device_type_tv">Només la televisió</string>
++    <string name="device_type_soundbar">Una barra de so</string>
++    <string name="device_type_receiver">Un receptor</string>
++    <string name="brand_title_tv">De quina marca és el televisor?</string>
++    <string name="brand_title_soundbar">De quina marca és la barra de so?</string>
++    <string name="brand_title_receiver">De quina marca és el receptor?</string>
++    <string name="pairing_programming">S\'estan enviant els codis al comandament…</string>
++    <string name="pairing_title">Proveu els botons de volum</string>
++    <string name="pairing_description">Apunteu amb el comandament cap al dispositiu i premeu Vol+ o Vol-. Canvia el volum de la música?</string>
++    <string name="pairing_attempt">Conjunt de codis %1$d de %2$d</string>
++    <string name="pairing_error_title">No s\'ha pogut programar el comandament</string>
++    <string name="pairing_error_description">Assegureu-vos que el comandament estigui vinculat i a prop. (%1$s)</string>
++    <string name="code_set_item">Conjunt de codis %1$d</string>
++    <string name="action_yes">Sí</string>
++    <string name="action_no">No, prova el següent</string>
++    <string name="action_choose_code_set">Trieu un conjunt de codis</string>
++    <string name="action_try_again">Torna-ho a provar</string>
++    <string name="action_skip">Omet aquest conjunt de codis</string>
++    <string name="action_other_brand">Trieu una altra marca</string>
++    <string name="done_title">El comandament ara controla %1$s</string>
++    <string name="done_description">Els botons d\'encesa i de volum envien ordres per infrarojos.</string>
++    <string name="failed_title">No s\'ha pogut executar cap codi %1$s</string>
++    <string name="failed_description">Podeu tornar a provar-los o triar una altra marca: alguns dispositius es venen amb diversos noms.</string>
++    <string name="clear_title">Voleu esborrar la configuració d\'infrarojos del comandament?</string>
++    <string name="clear_description">Elimina els codis infrarojos del comandament, inclosos els codis configurats per altres aplicacions. El comandament deixarà de controlar el dispositiu fins que es torni a configurar.</string>
++    <string name="clear_done">S\'ha eliminat la configuració del comandament</string>
++    <string name="clear_failed">No s\'ha pogut connectar amb el comandament</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-es/strings.xml b/packages/RemoteButtons/res/values-es/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..5066017e48677064c3775c5f13544db617476255
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-es/strings.xml
+@@ -0,0 +1,36 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Botones del mando a distancia</string>
++    <string name="settings_title">Configurar botones del mando a distancia</string>
++    <string name="permission_needed">Se necesita el permiso de Bluetooth para programar el mando a distancia.</string>
++    <string name="status_configured">Configurar para %1$s.</string>
++    <string name="status_not_configured">Todavía no hay nada configurado.</string>
++    <string name="action_set_up">Configurar</string>
++    <string name="notice_title">Controla tu televisor con este mando a distancia</string>
++    <string name="device_type_title">¿Qué debería controlar el mando a distancia?</string>
++    <string name="device_type_soundbar">Una barra de sonido</string>
++    <string name="device_type_receiver">Un receptor</string>
++    <string name="brand_title_tv">¿De qué marca es tu televisor?</string>
++    <string name="brand_title_soundbar">¿De qué marca es tu barra de sonido?</string>
++    <string name="brand_title_receiver">¿De qué marca es tu receptor?</string>
++    <string name="pairing_programming">Enviando códigos al mando…</string>
++    <string name="pairing_attempt">Conjunto de códigos %1$d de %2$d</string>
++    <string name="pairing_error_title">No se pudo programar el mando a distancia</string>
++    <string name="pairing_error_description">Asegúrate de que el mando a distancia está emparejado y cerca. (%1$s)</string>
++    <string name="code_set_item">Conjunto de códigos %1$d</string>
++    <string name="action_yes">Sí</string>
++    <string name="action_no">No, prueba el siguiente</string>
++    <string name="action_choose_code_set">Elige un conjunto de códigos</string>
++    <string name="action_skip">Omitir este conjunto de códigos</string>
++    <string name="done_title">El mando a distancia ahora controla tu %1$s</string>
++    <string name="done_description">Los botones de encendido y volumen envían comandos infrarrojos.</string>
++    <string name="failed_description">Puedes volver a probarlos o elegir otra marca: algunos dispositivos se venden bajo distintos nombres.</string>
++    <string name="clear_title">¿Eliminar la configuración de infrarrojos del mando a distancia?</string>
++    <string name="clear_description">Elimina los códigos infrarrojos del mando a distancia, incluidos los configurados por otras aplicaciones. El mando a distancia dejará de controlar tu dispositivo hasta que se configure de nuevo.</string>
++    <string name="clear_done">Se eliminó la configuración del mando a distancia</string>
++    <string name="clear_failed">No se pudo conectar con el mando a distancia</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-fr/strings.xml b/packages/RemoteButtons/res/values-fr/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..38db8e788245a5364c8973e29e7b9d2c04b470a5
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-fr/strings.xml
+@@ -0,0 +1,13 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="brand_title_tv">Quelle est la marque de votre TV ?</string>
++    <string name="brand_title_soundbar">Quelle est la marque de votre barre de son ?</string>
++    <string name="pairing_title">Essayez les boutons de volume</string>
++    <string name="action_yes">Oui</string>
++    <string name="action_other_brand">Choisir une autre marque</string>
++    <string name="done_title">La télécommande contrôle à présent votre %1$s</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-ga-rIE/strings.xml b/packages/RemoteButtons/res/values-ga-rIE/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..5d21f438576c7ba64ef3b170411fad8bbab2c7be
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-ga-rIE/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Cnaipí an chianrialtáin</string>
++    <string name="settings_title">Cumraigh cnaipí an chianrialtáin</string>
++    <string name="permission_needed">Tá cead Bluetooth ag teastáil chun an cianrialtán a ríomhchlárú.</string>
++    <string name="welcome_description">Is féidir leis an gcianrialtán do theilifís, do bharra fuaime nó do ghlacadóir a chur ar siúl agus a mhúchadh, chomh maith leis an leibhéal fuaime a athrú, trí úsáid a bhaint as infridhearg.</string>
++    <string name="status_configured">Socraigh le haghaidh %1$s.</string>
++    <string name="status_not_configured">Níl aon rud curtha ar bun go fóill.</string>
++    <string name="action_set_up">Socrú</string>
++    <string name="action_clear">Socrú soiléir</string>
++    <string name="notice_title">Rialaigh do theilifís leis an gcianrialtán seo</string>
++    <string name="notice_description">Déanfar tástáil ar na cóid ceann ar cheann. Seinntear ceol le linn gach iarrachta, ionas gur féidir leat a chloisteáil an athraíonn an cianrialtán an leibhéal fuaime. Cinntigh nach bhfuil an fhuaim balbhaithe.</string>
++    <string name="device_type_title">Cad ba cheart don chianrialtán a rialú?</string>
++    <string name="device_type_tv">Mo theilifís amháin</string>
++    <string name="device_type_soundbar">Barra fuaime</string>
++    <string name="device_type_receiver">Glacadóir</string>
++    <string name="brand_title_tv">Cén branda é do theilifís?</string>
++    <string name="brand_title_soundbar">Cén branda é do bharra fuaime?</string>
++    <string name="brand_title_receiver">Cén branda é do ghlacadóir?</string>
++    <string name="pairing_programming">Cóid á seoladh chuig an ngléas cianda…</string>
++    <string name="pairing_title">Bain triail as na cnaipí toirte</string>
++    <string name="pairing_description">Dírigh an cianrialtán ar do ghléas agus brúigh Vol+ nó Vol-. An n-athraíonn airde na ceoil?</string>
++    <string name="pairing_attempt">Tacar cód %1$d de %2$d</string>
++    <string name="pairing_error_title">Níorbh fhéidir an cianrialtán a chlárú</string>
++    <string name="pairing_error_description">Cinntigh go bhfuil an cianrialtán péireáilte agus in aice láimhe. (%1$s)</string>
++    <string name="code_set_item">Tacar cód %1$d</string>
++    <string name="action_yes">Sea</string>
++    <string name="action_no">Ní hea, bain triail as an gcéad cheann eile</string>
++    <string name="action_choose_code_set">Roghnaigh tacar cód</string>
++    <string name="action_try_again">Déan iarracht arís</string>
++    <string name="action_skip">Scipeáil an tacar cód seo</string>
++    <string name="action_other_brand">Roghnaigh branda eile</string>
++    <string name="done_title">Rialaíonn an cianrialtán do %1$s anois</string>
++    <string name="done_description">Seolann na cnaipí cumhachta agus toirte orduithe infridhearga.</string>
++    <string name="failed_title">Níor oibrigh aon tacar cód %1$s</string>
++    <string name="failed_description">Is féidir leat triail a bhaint astu arís, nó branda eile a roghnú: díoltar roinnt feistí faoi ainmneacha éagsúla.</string>
++    <string name="clear_title">An scriosfar cumraíocht infridhearg an chianrialtáin?</string>
++    <string name="clear_description">Baineann sé na cóid infridhearga den chianrialtán, lena n-áirítear cóid a bhunaigh aipeanna eile. Ní bheidh an cianrialtán in ann do ghléas a rialú a thuilleadh go dtí go ndéanfar é a chumrú arís.</string>
++    <string name="clear_done">Socruithe cianda glanta</string>
++    <string name="clear_failed">Níorbh fhéidir an cianrialtán a bhaint amach</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-hu/strings.xml b/packages/RemoteButtons/res/values-hu/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..778b1a4420f1524201cfb855fa37aa21a0c8211a
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-hu/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Távirányító gombok</string>
++    <string name="settings_title">Gombok beállítása</string>
++    <string name="permission_needed">A távirányító programozásához bluetooth-jogosultság szükséges.</string>
++    <string name="welcome_description">Az infraporton keresztül képes lesz ki- bekapcsolni, hangerőt változtatni TV-jén, erősítőjén vagy hangprojektorán.</string>
++    <string name="status_configured">%1$s beállítása.</string>
++    <string name="status_not_configured">Még nincs semmi beállítva.</string>
++    <string name="action_set_up">Beállítás</string>
++    <string name="action_clear">Beállítás törlése</string>
++    <string name="notice_title">Irányítsa TV-jét ezzel a távirányítóval</string>
++    <string name="notice_description">Egyenként próbáljuk ki a kódokat. A próbálkozások alatt zene szól, így hallhatja, hogy a távirányító módosítja-e a hangerőt. Ügyeljen arra, hogy a hang ne legyen némítva.</string>
++    <string name="device_type_title">Mit kellene a távirányítónak vezérelnie?</string>
++    <string name="device_type_tv">Csak a TV-met</string>
++    <string name="device_type_soundbar">Egy hangprojektort</string>
++    <string name="device_type_receiver">Egy erősítőt</string>
++    <string name="brand_title_tv">Ki gyártotta a TV-t ?</string>
++    <string name="brand_title_soundbar">Ki gyártotta a hangprojektort ?</string>
++    <string name="brand_title_receiver">Ki gyártotta az erősítőt ?</string>
++    <string name="pairing_programming">Kód küldése a távirányítóra…</string>
++    <string name="pairing_title">Próbálja ki a hengerőgombokat</string>
++    <string name="pairing_description">Irányítsa a távirányítót az eszközére és nyomja meg a hangerő fel vagy le gombot. Megváltozott a hengerő?</string>
++    <string name="pairing_attempt">%2$d / %1$d kódkészlet</string>
++    <string name="pairing_error_title">Nem sikerült beprogramozni a távirányítót</string>
++    <string name="pairing_error_description">Legyen biztos benne, hogy a (%1$s) távirányító párosítva van, és a közelben található.</string>
++    <string name="code_set_item">%1$d kód</string>
++    <string name="action_yes">Igen</string>
++    <string name="action_no">Nem. Próbálja ki a következőt</string>
++    <string name="action_choose_code_set">Válasszon kódkészletet</string>
++    <string name="action_try_again">Próbálja meg újra</string>
++    <string name="action_skip">Kódkészlet kihagyása</string>
++    <string name="action_other_brand">Válasszon másik gyártót</string>
++    <string name="done_title">A távirányító most már alkalmas a következő irányítására: %1$s</string>
++    <string name="done_description">A bekapcsoló- és a hangerőgombok infra-parancsokat küldenek.</string>
++    <string name="failed_title">%1$s ez a kódkészlet nem működik</string>
++    <string name="failed_description">Megpróbálhatja újra őket, vagy választhat egy másik gyártót: egyes készülékeket többféle néven is forgalmaznak.</string>
++    <string name="clear_title">Törli a távirányító infravörös beállításait?</string>
++    <string name="clear_description">Eltávolítja az infravörös kódokat a távirányítóból – beleértve a más alkalmazások által beállított kódokat is. A távirányító ezt követően nem vezérli tovább a készüléket, amíg újra be nem állítja.</string>
++    <string name="clear_done">A távirányító beállításait töröltük</string>
++    <string name="clear_failed">A távirányító nem érhető el</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-in/strings.xml b/packages/RemoteButtons/res/values-in/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..8a112511e0a06eea8e41bcca0f87ed6f3ec18da7
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-in/strings.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="action_yes">Ya</string>
++    <string name="action_try_again">Coba lagi</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-it/strings.xml b/packages/RemoteButtons/res/values-it/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..21730552ed5982b249c2254d0ccc033f5050bf81
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-it/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Pulsanti del telecomando</string>
++    <string name="settings_title">Configura i pulsanti del telecomando</string>
++    <string name="permission_needed">L\'autorizzazione Bluetooth è necessaria per configurare il telecomando.</string>
++    <string name="welcome_description">Il telecomando può accendere e spegnere la TV, la soundbar o il ricevitore e regolarne il volume utilizzando gli infrarossi.</string>
++    <string name="status_configured">Configurato per %1$s.</string>
++    <string name="status_not_configured">Non ancora configurato.</string>
++    <string name="action_set_up">Configura</string>
++    <string name="action_clear">Elimina configurazione</string>
++    <string name="notice_title">Controlla la tua TV con questo telecomando</string>
++    <string name="notice_description">I codici verranno provati uno per uno. Durante ogni tentativo viene riprodotta della musica in modo da poter sentire se il telecomando regola il volume. Assicurati che l\'audio non sia mutato.</string>
++    <string name="device_type_title">Che cosa dovrebbe essere controllato dal telecomando?</string>
++    <string name="device_type_tv">Solo la mia TV</string>
++    <string name="device_type_soundbar">Una soundbar</string>
++    <string name="device_type_receiver"/>
++    <string name="brand_title_tv">Di quale marca è la tua TV?</string>
++    <string name="brand_title_soundbar">Di quale marca è la tua soundbar?</string>
++    <string name="brand_title_receiver">Di quale marca è il tuo ricevitore?</string>
++    <string name="pairing_programming">Invio dei codici al telecomando…</string>
++    <string name="pairing_title">Prova i pulsanti del volume</string>
++    <string name="pairing_description">Puntare il telecomando verso il dispositivo e premere i pulsanti del volume. Il volume della musica cambia?</string>
++    <string name="pairing_attempt">Gruppo di codici %1$d di %2$d</string>
++    <string name="pairing_error_title">Impossibile configurare il telecomando</string>
++    <string name="pairing_error_description">Assicurati che il telecomando sia accoppiato e nelle vicinanze. (%1$s)</string>
++    <string name="code_set_item">Gruppo di codici %1$d</string>
++    <string name="action_yes">Sì</string>
++    <string name="action_no">No, prova il prossimo</string>
++    <string name="action_choose_code_set">Scegli un gruppo di codici</string>
++    <string name="action_try_again">Riprova</string>
++    <string name="action_skip">Salta questo gruppo di codici</string>
++    <string name="action_other_brand">Scegli un\'altra marca</string>
++    <string name="done_title">Il telecomando ora controlla il tuo %1$s</string>
++    <string name="done_description">I pulsanti di accensione e volume inviano comandi infrarossi.</string>
++    <string name="failed_title">Nessun gruppo di codici %1$s ha funzionato</string>
++    <string name="failed_description">Puoi riprovarli, o scegliere un\'altra marca: alcuni dispositivi sono venduti sotto più nomi.</string>
++    <string name="clear_title">Cancellare la configurazione degli infrarossi del telecomando?</string>
++    <string name="clear_description">Rimuove i codici a infrarossi dal telecomando, inclusi i codici configurati da altre applicazioni. Il telecomando non controllerà più il dispositivo fino a quando non verrà configurato di nuovo.</string>
++    <string name="clear_done">Configurazione del telecomando eliminata</string>
++    <string name="clear_failed">Impossibile raggiungere il telecomando</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-ja/strings.xml b/packages/RemoteButtons/res/values-ja/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..9aebd5f79aebf8cb063f3815400e393b72e50f06
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-ja/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">リモートボタン</string>
++    <string name="settings_title">リモートボタンの設定</string>
++    <string name="permission_needed">リモコンをプログラムするには Bluetooth の権限が必要です。</string>
++    <string name="welcome_description">リモコンは赤外線を使用して、テレビ、サウンドバー、または受信機のオンオフや音量変更ができます。</string>
++    <string name="status_configured">%1$s に設定しました。</string>
++    <string name="status_not_configured">まだ設定されていません。</string>
++    <string name="action_set_up">セットアップ</string>
++    <string name="action_clear">セットアップをクリア</string>
++    <string name="notice_title">このリモコンでテレビを制御します</string>
++    <string name="notice_description">コードは一つずつ試行されます。音楽が試行ごとに再生されるので、音量を変更できたか聞いて確かめてください。 音量がミュートになっていないことを確認してください。</string>
++    <string name="device_type_title">リモコンで何を操作しますか？</string>
++    <string name="device_type_tv">テレビのみ</string>
++    <string name="device_type_soundbar">サウンドバー</string>
++    <string name="device_type_receiver">受信機</string>
++    <string name="brand_title_tv">どのブランドのテレビですか？</string>
++    <string name="brand_title_soundbar">どのブランドのサウンドバーですか？</string>
++    <string name="brand_title_receiver">どのブランドの受信機ですか？</string>
++    <string name="pairing_programming">コードを送信中…</string>
++    <string name="pairing_title">音量ボタンを試してください</string>
++    <string name="pairing_description">デバイスにリモコンを向けて、音量+または-を押してください。音楽の音量は変わりますか？</string>
++    <string name="pairing_attempt">コードセット %1$d / %2$d</string>
++    <string name="pairing_error_title">リモコンをプログラムできませんでした</string>
++    <string name="pairing_error_description">リモコンがペアリングされているか、近くにあるか確認してください。(%1$s)</string>
++    <string name="code_set_item">コードセット %1$d</string>
++    <string name="action_yes">はい</string>
++    <string name="action_no">いいえ（次を試す）</string>
++    <string name="action_choose_code_set">コードセットを選択</string>
++    <string name="action_try_again">もう一度試す</string>
++    <string name="action_skip">このコードセットをスキップ</string>
++    <string name="action_other_brand">他のブランドを選択</string>
++    <string name="done_title">%1$s を制御できるようになりました</string>
++    <string name="done_description">電源ボタンと音量ボタンで赤外線コマンドを送信します。</string>
++    <string name="failed_title">%1$s コードセットが動作しませんでした</string>
++    <string name="failed_description">もう一度試すか、別のブランドを選んでください。一部のデバイスは別ブランドの名前で販売されていることがあります。</string>
++    <string name="clear_title">リモコンの IR 設定をクリアしますか？</string>
++    <string name="clear_description">リモコンから赤外線コードを削除します。他のアプリで設定したコードも削除されます。もう一度設定するまで、リモコンでデバイスを操作できなくなります。</string>
++    <string name="clear_done">リモコン設定をクリアしました</string>
++    <string name="clear_failed">リモコンを操作できませんでした</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-pl/strings.xml b/packages/RemoteButtons/res/values-pl/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..3dfe7d29b66f02b4b33f1b260e44d618553b2930
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-pl/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Zdalne przyciski</string>
++    <string name="settings_title">Skonfiguruj przyciski zdalne</string>
++    <string name="permission_needed">Aby zaprogramować pilota, wymagane jest uprawnienie Bluetooth.</string>
++    <string name="welcome_description">Pilot może włączać i wyłączać telewizor, pasek dźwięku lub odbiornik i zmieniać głośność za pomocą podczerwieni.</string>
++    <string name="status_configured">Konfiguracja dla %1$s.</string>
++    <string name="status_not_configured">Nic nie zostało jeszcze skonfigurowane.</string>
++    <string name="action_set_up">Skonfiguruj</string>
++    <string name="action_clear">Wyczyść ustawienia</string>
++    <string name="notice_title">Kontroluj swój telewizor za pomocą tego pilota</string>
++    <string name="notice_description">Kody będą sprawdzane jeden po drugim. Podczas każdej próby odtwarzana jest muzyka, dzięki czemu można usłyszeć, czy pilot zmienia głośność. Upewnij się, że dźwięk nie jest wyciszony.</string>
++    <string name="device_type_title">Co pilot powinien kontrolować?</string>
++    <string name="device_type_tv">Tylko mój telewizor</string>
++    <string name="device_type_soundbar">Listwa dźwiękowa</string>
++    <string name="device_type_receiver">Odbiornik</string>
++    <string name="brand_title_tv">Jakiej marki jest twój telewizor?</string>
++    <string name="brand_title_soundbar">Jakiej marki jest twoja listwa dźwiękowa?</string>
++    <string name="brand_title_receiver">Jakiej marki jest twój odbiornik?</string>
++    <string name="pairing_programming">Wysyłanie kodów do pilota…</string>
++    <string name="pairing_title">Wypróbuj przyciski głośności</string>
++    <string name="pairing_description">Skieruj pilota w stronę urządzenia i naciśnij przycisk Vol+ lub Vol-. Czy zmienia się głośność muzyki?</string>
++    <string name="pairing_attempt">Zestaw kodów %1$d z %2$d</string>
++    <string name="pairing_error_title">Nie można zaprogramować pilota</string>
++    <string name="pairing_error_description">Upewnij się, że pilot jest sparowany i w pobliżu. (%1$s)</string>
++    <string name="code_set_item">Zestaw kodów %1$d</string>
++    <string name="action_yes">Tak</string>
++    <string name="action_no">Nie, wypróbuj następny</string>
++    <string name="action_choose_code_set">Wybierz zestaw kodów</string>
++    <string name="action_try_again">Spróbuj ponownie</string>
++    <string name="action_skip">Pomiń ten zestaw kodów</string>
++    <string name="action_other_brand">Wybierz inną markę</string>
++    <string name="done_title">Pilot steruje teraz urządzeniami %1$s</string>
++    <string name="done_description">Przyciski zasilania i głośności wysyłają sygnały na podczerwień.</string>
++    <string name="failed_title">Żaden zestaw kodów %1$s nie zadziałał</string>
++    <string name="failed_description">Możesz spróbować ponownie albo wybrać inną markę: niektóre urządzenia są sprzedawane pod kilkoma nazwami.</string>
++    <string name="clear_title">Czy wyczyścić ustawienia podczerwieni pilota?</string>
++    <string name="clear_description">Usuwa kody podczerwieni z pilota, w tym kody skonfigurowane przez inne aplikacje. Pilot przestanie sterować urządzeniem do czasu ponownej konfiguracji.</string>
++    <string name="clear_done">Zdalne ustawienia wyczyszczone</string>
++    <string name="clear_failed">Nie udało się połączyć z pilotem</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-pt-rPT/strings.xml b/packages/RemoteButtons/res/values-pt-rPT/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..83cddac77fdcc55a16622c13d5088490a72ca605
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-pt-rPT/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Botões do comando</string>
++    <string name="settings_title">Configurar botões do comando</string>
++    <string name="permission_needed">A permissão Bluetooth é necessária para programar o comando.</string>
++    <string name="welcome_description">O comando pode ligar a sua TV, barra de som ou recetor AV ao ligar/desligar e mudar o volume por infravermelhos.</string>
++    <string name="status_configured">Configurar para %1$s.</string>
++    <string name="status_not_configured">Ainda sem nada configurado.</string>
++    <string name="action_set_up">Configurar</string>
++    <string name="action_clear">Limpar configuração</string>
++    <string name="notice_title">Controle a sua TV com este comando</string>
++    <string name="notice_description">Os códigos serão testados um a um. A música reproduz durante cada tentativa para que consiga ouvir se o comando altera o volume. Certifique-se de que o som não está silenciado.</string>
++    <string name="device_type_title">O que deve o comando controlar?</string>
++    <string name="device_type_tv">Apenas a minha TV</string>
++    <string name="device_type_soundbar">Uma barra de som</string>
++    <string name="device_type_receiver">Um recetor AV</string>
++    <string name="brand_title_tv">De que marca é a sua TV?</string>
++    <string name="brand_title_soundbar">De que marca é a sua barra de som?</string>
++    <string name="brand_title_receiver">De que marca é o seu recetor AV?</string>
++    <string name="pairing_programming">A enviar códigos para o comando…</string>
++    <string name="pairing_title">Experimente os botões de volume</string>
++    <string name="pairing_description">Aponte o comando para o seu dispositivo e pressione o botão Vol+ ou Vol-. O volume da música altera?</string>
++    <string name="pairing_attempt">Código definido %1$d de %2$d</string>
++    <string name="pairing_error_title">Não foi possível programar o comando</string>
++    <string name="pairing_error_description">Certifique-se de que o comando está emparelhado e nas proximidades. (%1$s)</string>
++    <string name="code_set_item">Código definido %1$d</string>
++    <string name="action_yes">Sim</string>
++    <string name="action_no">Não. Tentar o próximo</string>
++    <string name="action_choose_code_set">Escolha um conjunto de códigos</string>
++    <string name="action_try_again">Tentar novamente</string>
++    <string name="action_skip">Ignorar este conjunto de códigos</string>
++    <string name="action_other_brand">Escolha outra marca</string>
++    <string name="done_title">O comando agora controla o seu dispositivo %1$s</string>
++    <string name="done_description">Os botões de ligar/desligar e de volume enviam comandos por infravermelhos.</string>
++    <string name="failed_title">Nenhum código definido para %1$s funcionou</string>
++    <string name="failed_description">Pode tentar novamente, ou escolher outra marca: alguns dispositivos são vendidos sob vários nomes.</string>
++    <string name="clear_title">Limpar as configurações IR do comando?</string>
++    <string name="clear_description">Remove os códigos infravermelhos do comando, incluindo códigos configurados por outras aplicações. O comando deixará de controlar o seu dispositivo até que seja configurado novamente.</string>
++    <string name="clear_done">Configuração do comando limpa</string>
++    <string name="clear_failed">Não é possível alcançar o comando</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-ro/strings.xml b/packages/RemoteButtons/res/values-ro/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..5a88f8e2d0b3b43154272633a134866385ec2d43
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-ro/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Butoane telecomandă</string>
++    <string name="settings_title">Configurați butoanele telecomenzii</string>
++    <string name="permission_needed">Pentru a programa telecomanda este necesară permisiunea Bluetooth.</string>
++    <string name="welcome_description">Telecomanda poate porni și dezactiva televizorul, bara sonoră sau receptorul și poate schimba volumul acestora folosind infraroșu.</string>
++    <string name="status_configured">Configurare pentru %1$s.</string>
++    <string name="status_not_configured">Nimic configurat încă.</string>
++    <string name="action_set_up">Configurați</string>
++    <string name="action_clear">Șterge configurarea</string>
++    <string name="notice_title">Controlați televizorul cu această telecomandă</string>
++    <string name="notice_description">Codurile vor fi testate unul câte unul. Muzica se redă în timpul fiecărei încercări, astfel încât să puteți auzi dacă telecomanda schimbă volumul. Asigurați-vă că sunetul nu este dezactivat.</string>
++    <string name="device_type_title">Ce ar trebui să controleze telecomanda?</string>
++    <string name="device_type_tv">Doar televizorul meu</string>
++    <string name="device_type_soundbar">O bară sonoră</string>
++    <string name="device_type_receiver">Un receptor</string>
++    <string name="brand_title_tv">Ce marcă este televizorul dvs.?</string>
++    <string name="brand_title_soundbar">Ce marcă este bara dvs. sonoră?</string>
++    <string name="brand_title_receiver">Ce marcă este receptorul dvs.?</string>
++    <string name="pairing_programming">Se trimit coduri la telecomandă…</string>
++    <string name="pairing_title">Încercați butoanele de volum</string>
++    <string name="pairing_description">Îndreptați telecomanda spre dispozitivul dvs. și apăsați Vol+ sau Vol-. Se schimbă volumul muzicii?</string>
++    <string name="pairing_attempt">Set cod %1$d din %2$d</string>
++    <string name="pairing_error_title">Nu s-a putut programa telecomanda</string>
++    <string name="pairing_error_description">Asigurați-vă că telecomanda este asociată și în apropiere. (%1$s)</string>
++    <string name="code_set_item">Set cod %1$d</string>
++    <string name="action_yes">Da</string>
++    <string name="action_no">Nu, încearcă urmatorul</string>
++    <string name="action_choose_code_set">Alegeți un set de coduri</string>
++    <string name="action_try_again">Încercați din nou</string>
++    <string name="action_skip">Săriți peste acest set de coduri</string>
++    <string name="action_other_brand">Alegeți o altă marcă</string>
++    <string name="done_title">Telecomanda controlează acum %1$s</string>
++    <string name="done_description">Butoanele de pornire și volum trimit comenzi în infraroșu.</string>
++    <string name="failed_title">Niciun set de coduri %1$s nu a funcționat</string>
++    <string name="failed_description">Le puteți încerca din nou sau puteți alege o altă marcă: unele dispozitive sunt vândute sub mai multe denumiri.</string>
++    <string name="clear_title">Ștergeți configurarea IR a telecomenzii?</string>
++    <string name="clear_description">Elimină codurile infraroșii din telecomandă, inclusiv codurile stabilite de alte aplicații. Telecomanda nu va mai controla dispozitivul până când aceasta va fi configurată din nou.</string>
++    <string name="clear_done">Configurare telecomandă ștearsă</string>
++    <string name="clear_failed">Nu s-a putut conecta la telecomandă</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-ru/strings.xml b/packages/RemoteButtons/res/values-ru/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..21da3695edc8a0c09cf47ad092307e462090dbdd
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-ru/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Пульт управления</string>
++    <string name="settings_title">Настройка кнопок пульта</string>
++    <string name="permission_needed">Необходимо разрешение Bluetooth для настройки пульта</string>
++    <string name="welcome_description">С помощью пульта дистанционного управления можно включать и выключать телевизор, саундбар или ресивер, а также регулировать громкость с помощью инфракрасного сигнала.</string>
++    <string name="status_configured">Настройка для %1$s.</string>
++    <string name="status_not_configured">Пока ничего не настроено.</string>
++    <string name="action_set_up">Настроить</string>
++    <string name="action_clear">Очистить настройки</string>
++    <string name="notice_title">Управляйте вашим ТВ с помощью этого пульта</string>
++    <string name="notice_description">Коды будут проверяться поочередно. Во время каждой попытки будет воспроизводиться музыка, чтобы вы могли услышать, изменяет ли пульт громкость. Убедитесь, что звук не отключен.</string>
++    <string name="device_type_title">Чем должен управлять пульт?</string>
++    <string name="device_type_tv">Только ТВ</string>
++    <string name="device_type_soundbar">Саундбаром</string>
++    <string name="device_type_receiver">Приемником</string>
++    <string name="brand_title_tv">Бренд вашего телевизора?</string>
++    <string name="brand_title_soundbar">Бренд вашего саундбара?</string>
++    <string name="brand_title_receiver">Бренд вашего приемника?</string>
++    <string name="pairing_programming">Отправка кодов на пульт…</string>
++    <string name="pairing_title">Попробовать кнопки громкости</string>
++    <string name="pairing_description">Наведите пульт на устройство и нажмите кнопку Vol+ или Vol-. Изменилась ли громкость музыки?</string>
++    <string name="pairing_attempt">Набор кодов %1$d из %2$d</string>
++    <string name="pairing_error_title">Не удалось настроить пульт</string>
++    <string name="pairing_error_description">Убедитесь, что пульт сопряжен и находится поблизости. (%1$s)</string>
++    <string name="code_set_item">Код %1$d установлен</string>
++    <string name="action_yes">Да</string>
++    <string name="action_no">Нет, попробовать следующий</string>
++    <string name="action_choose_code_set">Выберите код для установки</string>
++    <string name="action_try_again">Попробуйте еще раз</string>
++    <string name="action_skip">Пропустить установку этого кода</string>
++    <string name="action_other_brand">Выбрать другого производителя</string>
++    <string name="done_title">Теперь пульт управляет вашим %1$s</string>
++    <string name="done_description">Кнопки питания и громкости передают команды по ИК-порту</string>
++    <string name="failed_title">Ни один набор кодов %1$s не сработал</string>
++    <string name="failed_description">Вы можете попробовать настроить их снова или выбрать другого производителя - бывает, что одно и то же устройство продается под разными названиями.</string>
++    <string name="clear_title">Очистить настройки ИК-порта пульта?</string>
++    <string name="clear_description">Удаление инфракрасных кодов с пульта дистанционного управления, включая коды, установленные другими приложениями. Пульт перестанет управлять вашим устройством, пока оно не будет настроено снова.</string>
++    <string name="clear_done">Настройки пульта сброшены</string>
++    <string name="clear_failed">Не удалось подключиться к пульту</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-sl/strings.xml b/packages/RemoteButtons/res/values-sl/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..4a4c36362cbf668f6022c575234ced85c2295980
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-sl/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Gumbi daljinca</string>
++    <string name="settings_title">Nastavi gumbe daljinca</string>
++    <string name="permission_needed">Dovoljenje za Bluetooth je potrebno za programiranje daljinca</string>
++    <string name="welcome_description">Daljinec lahko vklopi ali izklopi vaš televizor, zvočno letev ali sprejemnik in spreminja njihovo glasnost z uporabo infrardečega vmesnika.</string>
++    <string name="status_configured">Nastavi za %1$s</string>
++    <string name="status_not_configured">Ničesar še ni nastavljenega</string>
++    <string name="action_set_up">Nastavi</string>
++    <string name="action_clear">Počisti nastavitev</string>
++    <string name="notice_title">Upravljajte vaš televizor s tem daljincem</string>
++    <string name="notice_description">Kode bodo preizkušene ena za drugo. Glasba se predvaja med vsakim poskusom, da lahko slišite ali daljinec spremeni glasnost. Prepričajte se, da zvok ni utišan.</string>
++    <string name="device_type_title">Kaj naj daljinec upravlja?</string>
++    <string name="device_type_tv">Samo moj televizor</string>
++    <string name="device_type_soundbar">Zvočno letev</string>
++    <string name="device_type_receiver">Sprejemnik</string>
++    <string name="brand_title_tv">Katere znamke je vaš televizor?</string>
++    <string name="brand_title_soundbar">Katere znamke je vaša zvočna letev?</string>
++    <string name="brand_title_receiver">Katere znamke je vaš sprejemnik?</string>
++    <string name="pairing_programming">Pošiljanje kod sprejemniku …</string>
++    <string name="pairing_title">Preizkusi gumbe za glasnost</string>
++    <string name="pairing_description">Usmerite daljinec proti vaši napravi in pritisnite glasnost gor ali glasnost dol. Se glasnost glasbe spremeni?</string>
++    <string name="pairing_attempt">Nabor kod %1$d od %2$d</string>
++    <string name="pairing_error_title">Daljinca ni bilo mogoče programirati</string>
++    <string name="pairing_error_description">Prepričajte se, da je daljinec seznanjen in v bližini. (%1$s)</string>
++    <string name="code_set_item">Nabor kod %1$d</string>
++    <string name="action_yes">Da</string>
++    <string name="action_no">Ne, poskusi naslednjo</string>
++    <string name="action_choose_code_set">Izberite nabor kod</string>
++    <string name="action_try_again">Poskusi znova</string>
++    <string name="action_skip">Preskoči ta nabor kod</string>
++    <string name="action_other_brand">Izberi drugo znamko</string>
++    <string name="done_title">Daljinec zdaj upravlja vaš %1$s</string>
++    <string name="done_description">Gumbi za vklop in glasnost pošiljajo infrardeče ukaze.</string>
++    <string name="failed_title">Noben nabor kod %1$s ni deloval</string>
++    <string name="failed_description">Lahko jih poizkusite ponovno ali izberete drugo znamko: nekatere naprave se prodajajo pod več imeni.</string>
++    <string name="clear_title">Počisti infrardečo nastavitev daljinca?</string>
++    <string name="clear_description">Odstrani infrardeče kode iz daljinca, vključno s kodami, nastavljene iz drugih aplikacij. Ta daljinec bo prenehal upravljati vašo napravo, dokler je ne nastavite ponovno.</string>
++    <string name="clear_done">Nastavitev daljinca počiščena</string>
++    <string name="clear_failed">Daljinca ni bilo mogoče doseči</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-ug/strings.xml b/packages/RemoteButtons/res/values-ug/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..202b7a2a77ddb084d2ffe8d8f0e34d053f2f2f4b
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-ug/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">تىزگىنەك توپچە</string>
++    <string name="settings_title">تىزگىنەك توپچە تەڭشىكى</string>
++    <string name="permission_needed">تىزگىنەكنى تەڭشەش ئۈچۈن كۆكچىش ئىجازىتىگە ئېھتىياجلىق.</string>
++    <string name="welcome_description">تىزگىنەك ئىنفىرا قىزىل نۇرلۇق ئۈزچات ئارقىلىق تېلېۋىزور، ياڭراتقۇ بالداق ياكى قوبۇللىغۇچنى ئېچىپ ۋە تاقىيالايدۇ ھەمدە ئاۋاز كۈچلۈكلۈكىنى ئۆزگەرتەلەيدۇ.</string>
++    <string name="status_configured">%1$s نى تەڭشەيدۇ.</string>
++    <string name="status_not_configured">ھېچنېمە تەڭشەلمىگەن.</string>
++    <string name="action_set_up">تەڭشەك</string>
++    <string name="action_clear">تەڭشەكنى تازىلا</string>
++    <string name="notice_title">بۇ تىزگىنەكتە تېلېۋىزورنى تىزگىنلەيدۇ</string>
++    <string name="notice_description">سىستېما پەرقلىق كودنى بىرمۇ-بىر سىنايدۇ. ھەر قېتىم سىنىغاندا نەغمە ياڭرىتىپ، تىزگىنەكنىڭ ئاۋاز كۈچلۈكلۈكىنى ئۆزگەرتكەن ياكى ئۆزگەرتمىگەنلىكىنى تىڭشىشىڭىزغا قولايلىق يارىتىدۇ. ئۈسكۈنە ئاۋازىنىڭ ئۈنسىز ھالەتتە ئەمەسلىكىنى جەزملەڭ.</string>
++    <string name="device_type_title">تىزگىنەك نېمىنى تىزگىنلىشى كېرەك؟</string>
++    <string name="device_type_tv">تېلېۋىزورلا</string>
++    <string name="device_type_soundbar">ياڭراتقۇ بالداق</string>
++    <string name="device_type_receiver">قوبۇللىغۇچ</string>
++    <string name="brand_title_tv">تېلېۋىزورنىڭ ماركىسى نېمە؟</string>
++    <string name="brand_title_soundbar">ياڭراتقۇ بالداقنىڭ ماركىسى نېمە؟</string>
++    <string name="brand_title_receiver">قوبۇللىغۇچنىڭ ماركىسى نېمە؟</string>
++    <string name="pairing_programming">تىزگىنەككە كود يوللاۋاتىدۇ…</string>
++    <string name="pairing_title">ئاۋاز توپچىنى سىنا</string>
++    <string name="pairing_description">تىزگىنەكتە ئۈسكۈنىنى نىشانلاپ Vol+ ياكى Vol-توپچە بېسىلىدۇ. نەغمىنىڭ ئاۋاز كۈچلۈكلۈكى ئۆزگەردىمۇ؟</string>
++    <string name="pairing_attempt">%1$d/%2$d كود تەڭشەلدى</string>
++    <string name="pairing_error_title">تىزگىنەككە پىروگرامما تۈزەلمىدى</string>
++    <string name="pairing_error_description">تىزگىنەكنىڭ جۈپلەنگەنلىكى ۋە يېقىن ئەتراپتا ئىكەنلىكىنى جەزملەڭ.(%1$s)</string>
++    <string name="code_set_item">%1$d كود تەڭشەلدى</string>
++    <string name="action_yes">ھەئە</string>
++    <string name="action_no">ياق، كېيىنكىنى سىنا</string>
++    <string name="action_choose_code_set">كود توپلىمى تاللىنىدۇ</string>
++    <string name="action_try_again">قايتا سىنا</string>
++    <string name="action_skip">بۇ كود توپلىمىدىن ئاتلا</string>
++    <string name="action_other_brand">باشقا ماركىنى تاللاڭ</string>
++    <string name="done_title">ھازىر تىزگىنەك %1$s نى باشقۇرىدۇ</string>
++    <string name="done_description">توك مەنبە ۋە ئاۋاز توپچە ئىنفىرا قىزىل نۇردا بۇيرۇق يوللايدۇ.</string>
++    <string name="failed_title">ھېچقانداق %1$s كود توپلىمى ئىشلىمىدى</string>
++    <string name="failed_description">قايتا سىناڭ ياكى باشقا ماركىنى تاللاڭ: بەزى ئۈسكۈنە بىر قانچە ماركىدا سېتىلىدۇ.</string>
++    <string name="clear_title">تىزگىنەكنىڭ ئىنفىرا قىزىل نۇر تەڭشىكىنى تازىلامدۇ؟</string>
++    <string name="clear_description">تىزگىنەكتىن ئىنفىرا قىزىل نۇر كودىنى چىقىرىۋېتىدۇ، باشقا ئەپ تەڭشىگەن كودنىمۇ ئۆز ئىچىگە ئالىدۇ. تىزگىنەك تاكى قايتا تەڭشەلگۈچە ئۈسكۈنىنى تىزگىنلەشتىن توختايدۇ.</string>
++    <string name="clear_done">تىزگىنەك تەڭشىكى تازىلاندى</string>
++    <string name="clear_failed">تىزگىنەككە ئۇلىشالمىدى</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-vi/strings.xml b/packages/RemoteButtons/res/values-vi/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..28ea71a3e65662e0954d1d981458bfcfdb51eaaf
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-vi/strings.xml
+@@ -0,0 +1,45 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="app_name">Các nút điều khiển từ xa</string>
++    <string name="settings_title">Thiết lập các nút trên điều khiển từ xa</string>
++    <string name="permission_needed">Cần có quyền truy cập Bluetooth để lập trình điều khiển từ xa.</string>
++    <string name="welcome_description">Điều khiển từ xa có thể bật/tắt TV, loa thanh hoặc thiết bị thu âm thanh của bạn, cũng như điều chỉnh âm lượng của chúng thông qua tia hồng ngoại.</string>
++    <string name="status_configured">Thiết lập cho %1$s.</string>
++    <string name="status_not_configured">Chưa thiết lập gì cả.</string>
++    <string name="action_set_up">Thiết lập</string>
++    <string name="action_clear">Xóa thiết lập</string>
++    <string name="notice_title">Điều khiển TV của bạn bằng chiếc điều khiển này</string>
++    <string name="notice_description">Các mã sẽ được thử lần lượt. Nhạc sẽ phát trong mỗi lần thử để bạn có thể nghe xem điều khiển từ xa có làm thay đổi âm lượng hay không. Hãy đảm bảo rằng âm thanh không bị tắt.</string>
++    <string name="device_type_title">Điều khiển từ xa nên dùng để làm gì?</string>
++    <string name="device_type_tv">Chỉ cho TV của tôi</string>
++    <string name="device_type_soundbar">Một chiếc loa thanh</string>
++    <string name="device_type_receiver">Một thiết bị thu âm thanh</string>
++    <string name="brand_title_tv">TV của bạn thuộc thương hiệu nào?</string>
++    <string name="brand_title_soundbar">Loa thanh của bạn thuộc thương hiệu nào?</string>
++    <string name="brand_title_receiver">Thiết bị thu âm của bạn thuộc thương hiệu nào?</string>
++    <string name="pairing_programming">Đang gửi mã đến điều khiển từ xa…</string>
++    <string name="pairing_title">Hãy thử các nút âm lượng</string>
++    <string name="pairing_description">Hướng điều khiển từ xa về phía thiết bị của bạn rồi nhấn Vol+ hoặc Vol-. Âm lượng nhạc có thay đổi không?</string>
++    <string name="pairing_attempt">Bộ mã %1$d trong %2$d</string>
++    <string name="pairing_error_title">Không thể lập trình điều khiển từ xa</string>
++    <string name="pairing_error_description">Đảm bảo điều khiển từ xa đã được ghép nối và đặt ở gần. (%1$s)</string>
++    <string name="code_set_item">Bộ mã %1$d</string>
++    <string name="action_yes">Có</string>
++    <string name="action_no">Không, thử cái tiếp theo</string>
++    <string name="action_choose_code_set">Chọn một bộ mã</string>
++    <string name="action_try_again">Thử lại</string>
++    <string name="action_skip">Bỏ qua bộ mã này</string>
++    <string name="action_other_brand">Chọn một thương hiệu khác</string>
++    <string name="done_title">Điều khiển từ xa giờ đây điều khiển %1$s của bạn</string>
++    <string name="done_description">Các nút nguồn và âm lượng gửi lệnh hồng ngoại.</string>
++    <string name="failed_title">Không có bộ mã %1$s nào hoạt động</string>
++    <string name="failed_description">Bạn có thể thử lại chúng, hoặc chọn một thương hiệu khác: Một số thiết bị được bán dưới nhiều tên gọi khác nhau.</string>
++    <string name="clear_title">Xóa thiết lập hồng ngoại (IR) của điều khiển từ xa?</string>
++    <string name="clear_description">Xóa các mã hồng ngoại khỏi điều khiển từ xa, bao gồm cả những mã đã được thiết lập bởi các ứng dụng khác. Điều khiển từ xa sẽ ngừng điều khiển thiết bị của bạn cho đến khi được thiết lập lại.</string>
++    <string name="clear_done">Thiết lập điều khiển từ xa đã được xóa</string>
++    <string name="clear_failed">Không thể kết nối với điều khiển từ xa</string>
++</resources>
+diff --git a/packages/RemoteButtons/res/values-zh-rHK/strings.xml b/packages/RemoteButtons/res/values-zh-rHK/strings.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..d2e29a1d9c564dd532be55eebd6f8d70de3887f8
+--- /dev/null
++++ b/packages/RemoteButtons/res/values-zh-rHK/strings.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     SPDX-FileCopyrightText: The LineageOS Project
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <string name="action_yes">是</string>
++</resources>

@@ -1,0 +1,73 @@
+--- a/src/util/u_gralloc/u_gralloc_fallback.c
++++ b/src/util/u_gralloc/u_gralloc_fallback.c
+@@ -19,6 +19,7 @@
+ #include <string.h>
+ 
+ #include "u_gralloc_cros_nv12.h"
++#include "u_gralloc_cros_yv12.h"
+ 
+ struct fallback_gralloc {
+    struct u_gralloc base;
+@@ -111,6 +112,11 @@
+    if (hnd->hal_format == 0x1000)
+       return cros_nv12_get_buffer_info(hnd, out);
+ 
++   struct fallback_gralloc *gr = (struct fallback_gralloc *)gralloc;
++   if (hnd->hal_format == HAL_PIXEL_FORMAT_YV12 &&
++       (!gr || !gr->gralloc_module || !gr->gralloc_module->lock_ycbcr))
++      return cros_yv12_get_buffer_info(hnd, out);
++
+    if (hnd->handle->numFds == 0)
+       return -EINVAL;
+ 
+--- /dev/null
++++ b/src/util/u_gralloc/u_gralloc_cros_yv12.h
+@@ -0,0 +1,48 @@
++/* SPDX-License-Identifier: MIT */
++#ifndef U_GRALLOC_CROS_YV12_H
++#define U_GRALLOC_CROS_YV12_H
++
++#include "u_gralloc_cros_nv12.h"
++
++/* minigbm's internal Android-stride variant is not a DRM import fourcc. */
++#define CROS_YVU420_ANDROID fourcc_code('9', '9', '9', '7')
++
++static int
++cros_yv12_get_buffer_info(struct u_gralloc_buffer_handle *hnd,
++                         struct u_gralloc_buffer_basic_info *out)
++{
++   const native_handle_t *native = hnd->handle;
++   struct cros_nv12_handle h;
++
++   if (!native || native->version != sizeof(native_handle_t) ||
++       native->numFds < 3 || native->numFds > 4 || native->numInts < 0 ||
++       (uint64_t)native->numFds + native->numInts !=
++          (sizeof(h) - sizeof(native_handle_t)) / sizeof(int))
++      return -EINVAL;
++
++   memcpy(&h, native, sizeof(h));
++   if (h.magic != 0xABCDDCBA ||
++       (h.format != DRM_FORMAT_YVU420 && h.format != CROS_YVU420_ANDROID) ||
++       h.droid_format != HAL_PIXEL_FORMAT_YV12 ||
++       h.num_planes != 3 || !h.width || !h.height ||
++       native->numFds != 3 + (h.reserved_region_size > 0))
++      return -EINVAL;
++
++   for (unsigned i = 0; i < h.num_planes; ++i) {
++      if (h.fds[i] < 0 || !h.strides[i] || h.strides[i] > INT_MAX ||
++          h.offsets[i] > INT_MAX)
++         return -EINVAL;
++   }
++
++   out->drm_fourcc = DRM_FORMAT_YVU420;
++   out->modifier = h.modifier;
++   out->num_planes = h.num_planes;
++   for (unsigned i = 0; i < h.num_planes; ++i) {
++      out->fds[i] = h.fds[i];
++      out->strides[i] = h.strides[i];
++      out->offsets[i] = h.offsets[i];
++   }
++   return 0;
++}
++
++#endif

@@ -1,0 +1,18 @@
+diff --git a/extract_utils/makefiles.py b/extract_utils/makefiles.py
+index 11225f01096970143d3b3f6ea7e0f3bebf8683cf..bf8d5d07bd63b0c874f715c77908cebeea7a5af7 100644
+--- a/extract_utils/makefiles.py
++++ b/extract_utils/makefiles.py
+@@ -481,11 +481,12 @@ def write_app_package(file: File, builder: FileBpBuilder):
+ 
+ 
+ def write_framework_package(file: File, builder: FileBpBuilder):
+-    _, package_name = file_stem_package_name(file)
++    stem, package_name = file_stem_package_name(file, can_have_stem=True)
+ 
+     (
+         builder.set_rule_name('dex_import')
+         .name(package_name)
++        .stem(stem)
+         .owner()
+         .jars()
+         .specific()

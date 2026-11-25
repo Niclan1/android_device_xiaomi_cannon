@@ -1,0 +1,88 @@
+{
+  "release_tag": "lineage-24.0-cannong-20261125",
+  "model": "Redmi Note 9T global M2007J22G",
+  "codename": "cannong",
+  "zip": {
+    "filename": "lineage-24.0-20261125-UNOFFICIAL-cannon.zip",
+    "bytes": 1400451392,
+    "sha256": "eb64b115015cbac1923b88b953947f9ad98c4c015a1634c23cddc159de800a2c"
+  },
+  "kernel": "6.18.33-4k-gcfff553735e1",
+  "installation_route": "Bootloader fastboot: supplied DTBO, supplied recovery, reboot recovery; signed ADB sideload.",
+  "userdata_formatted": false,
+  "selinux": "Enforcing",
+  "os_hashtree_verification": "enforcing",
+  "bootloader": "unlocked; verified-boot state orange",
+  "verification_mode": "READ_ONLY_RUNNING_ANDROID_BLOCKS",
+  "recovery_context_full_readback_completed": false,
+  "partitions": {
+    "boot": {
+      "sha256": "5804c2d17c4eddd7e6acf11a367972efd74f3311c5c6d5f2163356f203bf2a25",
+      "bytes": 67108864
+    },
+    "vbmeta_system": {
+      "sha256": "3581b99ee9155cea968dcd935ea390d5084d76fc07cdb9673f56493615494c3b",
+      "bytes": 8388608
+    },
+    "vbmeta_vendor": {
+      "sha256": "59173d9f3137618fff0929ac76cb1842bc620f879418ca18617e3690c66c5ec6",
+      "bytes": 8388608
+    },
+    "vbmeta": {
+      "sha256": "a7143d3652c0e7e3048d4e8fecf3feb09c66dbb05f08eb2d20ea3dc1b4615d6a",
+      "bytes": 8388608
+    },
+    "system": {
+      "sha256": "679c4c427c61522d4469d4e9af8bd6ca3b52332f2b316a91aaedfdbc3bf66f0c",
+      "bytes": 2418032640
+    },
+    "vendor": {
+      "sha256": "5ac1ed25e7b62de02dec8628dfdcf28139e7a10ae2c208d7ce04be6c0a8283ba",
+      "bytes": 908771328
+    },
+    "product": {
+      "sha256": "ee147bc1dddb862ce1308a1e7f4376e9a30aa20ce75b334d355540d122e52b27",
+      "bytes": 1819484160
+    },
+    "system_ext": {
+      "sha256": "ef43c6ac4e525da1a650b4a172499020f6910f6d0c8aaa9abc1c27987a5ed3ab",
+      "bytes": 1769930752
+    },
+    "dtbo": {
+      "sha256": "221f62fdb07d6ab69acc9cafdc71b289347d489b872aa2bc4e0624dfbe63cd6a",
+      "bytes": 33554432
+    },
+    "recovery": {
+      "sha256": "fa87ed6043c5388f9418163aadbb0338aaa18c8182ce70751c3b029abdee1472",
+      "bytes": 134217728
+    }
+  },
+  "runtime_apexes": {
+    "private_payload_signers": 40,
+    "unchanged_presigned_cts_fixtures": 1,
+    "active_factory_containers_verified": 41,
+    "old_data_update_masking": false
+  },
+  "vanilla_runtime": "Existing userdata retained; old personal Google/root packages absent or disabled; no active Magisk or Google services. Not a factory-reset qualification.",
+  "accessory_scope": "Owner accepted USB headset and Bluetooth playback, silence and resume on the unchanged functional payload before signing-only final build.",
+  "final_regressions": {
+    "corrected_bluetooth_library_verified": true,
+    "type_c_controller_interrupts_and_sink_device_roles_verified": true,
+    "shared_low_latency_input_output": true,
+    "four_real_streams_144000_frames_each": true,
+    "stream_xruns": 0
+  },
+  "observations": [
+    "The original recovery-context product hash verification stopped. Subsequent full running-block readbacks matched all ten exact images. An offline verifier pass is not claimed.",
+    "The early boot initiator was not established and is not attributed.",
+    "The first cold exclusive AAudio hint fell back to ordinary latency; exclusive buffers are not shareable. Shared input/output and later shared fallbacks achieved low latency without policy injection.",
+    "The input probe observed brief initial clipping; stream completion is not an acoustic-quality guarantee."
+  ],
+  "deferred_limitations": [
+    "OrangeFox encrypted internal storage and recovery backup/restore",
+    "Charging-current integration; charger remains limited to 500 mA",
+    "Proprietary Thermal HAL cannot expose the real kernel zones"
+  ],
+  "ota_certificate_sha256": "534103643082ef3da52d0da292790e48fe0111bcd8e942aeacc33fc8510e2f00",
+  "owned_avb_public_blob_sha256": "2ea1af7c00f8f8d9a5014f6eb91cb8b9a4be6513e03764d7d11e48de27c46141"
+}

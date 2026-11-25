@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Installed to /vendor/etc/permissions/sku_noradio/ and sku_mainline_noradio/,
+    only read when ro.boot.product.vendor.sku is one of those (libinit fallback:
+    kernel without the CCCI modem stack, or androidboot.cannon.radio=off). Removes the telephony features declared elsewhere so the phone
+    process does not create the RIL and wait for the radio HAL.
+-->
+<permissions>
+    <unavailable-feature name="android.hardware.telephony" />
+    <unavailable-feature name="android.hardware.telephony.calling" />
+    <unavailable-feature name="android.hardware.telephony.carrierlock" />
+    <unavailable-feature name="android.hardware.telephony.cdma" />
+    <unavailable-feature name="android.hardware.telephony.data" />
+    <unavailable-feature name="android.hardware.telephony.euicc" />
+    <unavailable-feature name="android.hardware.telephony.euicc.mep" />
+    <unavailable-feature name="android.hardware.telephony.gsm" />
+    <unavailable-feature name="android.hardware.telephony.ims" />
+    <unavailable-feature name="android.hardware.telephony.ims.singlereg" />
+    <unavailable-feature name="android.hardware.telephony.mbms" />
+    <unavailable-feature name="android.hardware.telephony.messaging" />
+    <unavailable-feature name="android.hardware.telephony.radio.access" />
+    <unavailable-feature name="android.hardware.telephony.satellite" />
+    <unavailable-feature name="android.hardware.telephony.subscription" />
+</permissions>

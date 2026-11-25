@@ -20,3 +20,14 @@ allow mtk_hal_camera camera_vendor_data_file:file create_file_perms;
 
 get_prop(mtk_hal_camera, vendor_mtk_pq_prop)
 get_prop(mtk_hal_camera, vendor_mtk_pq_ro_prop)
+
+# CPU load sampling for the 3A/feature pipelines
+allow mtk_hal_camera proc_stat:file r_file_perms;
+
+# ION compat shim for the camera HAL (other clients use dma-buf heaps)
+allow mtk_hal_camera mtk_cam_ion_device:chr_file rw_file_perms;
+
+# MDP (mtk_mdp/mtk_mdp_limit), DIP and flashlight nodes
+allow mtk_hal_camera mtk_mdp_device:chr_file rw_file_perms;
+allow mtk_hal_camera camera_dip_device:chr_file rw_file_perms;
+allow mtk_hal_camera flashlight_device:chr_file rw_file_perms;

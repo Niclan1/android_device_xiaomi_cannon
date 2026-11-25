@@ -56,6 +56,13 @@ prebuilt_etc {
 }
 
 prebuilt_etc {
+    name: "init.cannon.gfx.rc",
+    src: "etc/init.cannon.gfx.rc",
+    sub_dir: "init",
+    vendor: true,
+}
+
+prebuilt_etc {
     name: "ueventd.mtk.rc",
     filename: "ueventd.rc",
     src: "etc/ueventd.mtk.rc",
@@ -66,5 +73,20 @@ prebuilt_etc {
 prebuilt_etc {
     name: "fstab.mt6853",
     src: "etc/fstab.mt6853",
+    vendor: true,
+}
+
+prebuilt_etc {
+    name: "init.cannon.native.rc",
+    src: "etc/init.cannon.native.rc",
+    sub_dir: "init",
+    vendor: true,
+}
+
+prebuilt_etc {
+    name: "init.cannon.vcodec.rc",
+    filename: "zz-init.cannon.vcodec.rc",
+    src: "etc/init.cannon.vcodec.rc",
+    sub_dir: "init",
     vendor: true,
 }

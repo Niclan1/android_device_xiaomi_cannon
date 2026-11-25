@@ -1,1 +1,10 @@
 set_prop(init, vendor_fingerprint_prop)
+
+# restorecon of /dev/block/by-name/cache
+allow init cache_block_device:lnk_file relabelto;
+
+set_prop(init, vendor_cannon_gauge_prop)
+allow init { sysfs sysfs_batteryinfo }:dir search;
+allow init { sysfs sysfs_batteryinfo }:lnk_file read;
+# init.cannon.gfx.rc: minigbm gralloc 4.0 bind mounts on mainline kernels
+allow init same_process_hal_file:file mounton;

@@ -3,3 +3,6 @@ demo.hole                                               u:object_r:exported_syst
 demo.near                                               u:object_r:exported_system_prop:s0
 demo.far                                                u:object_r:exported_system_prop:s0
 demo.fb                                                 u:object_r:exported_system_prop:s0
+
+# Legacy mnld checks the logging build flavour, even when unset.
+ro.logsystem.usertype u:object_r:log_prop:s0 exact int

@@ -1,0 +1,18 @@
+{
+ global:
+  gralloc_extra_query;
+  gralloc_extra_perform;
+  gralloc_extra_sf_set_status;
+  gralloc_extra_sf_set_status2;
+  gralloc_extra_need_resident;
+  gralloc_extra_get_platform_format;
+  ge_alloc;
+  ge_retain;
+  ge_release;
+  ge_free;
+  ge_perform_alloc_sec_hwc;
+  ge_perform_free_sec_hwc;
+  ge_perform_ion_debug;
+  ge_query_ion_debug;
+ local: *;
+};

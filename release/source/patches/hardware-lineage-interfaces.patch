@@ -1,0 +1,29 @@
+diff --git a/power-libperfmgr/Android.bp b/power-libperfmgr/Android.bp
+index af0b3731703ff421266c24a05981072ade57164a..bb26e06b9b2b66a620c9e1a7c55ea007e175a22b 100644
+--- a/power-libperfmgr/Android.bp
++++ b/power-libperfmgr/Android.bp
+@@ -15,7 +15,10 @@ cc_binary {
+     name: "android.hardware.power-service.lineage-libperfmgr",
+     defaults: ["android.hardware.power-ndk_shared"],
+     relative_install_path: "hw",
+-    init_rc: ["aidl/android.hardware.power-service.lineage-libperfmgr.rc"],
++    init_rc: select(soong_config_variable("power_libperfmgr", "service_init_rc"), {
++        any @ rc: [rc],
++        default: ["aidl/android.hardware.power-service.lineage-libperfmgr.rc"],
++    }),
+     vintf_fragments: ["aidl/android.hardware.power-service.lineage.xml"],
+     vendor: true,
+     cflags: [
+diff --git a/vibrator/aidl-legacy/Vibrator.cpp b/vibrator/aidl-legacy/Vibrator.cpp
+index aca2ecc601d4e4ba30db6668d6d3e8bf64ecd050..c7c849af9e36baca99280865bb85a3aaea3dea6b 100644
+--- a/vibrator/aidl-legacy/Vibrator.cpp
++++ b/vibrator/aidl-legacy/Vibrator.cpp
+@@ -38,7 +38,7 @@ Vibrator::Vibrator() {
+ 
+ ndk::ScopedAStatus Vibrator::getCapabilities(int32_t* _aidl_return) {
+     ALOGV("Vibrator reporting capabilities");
+-    *_aidl_return = IVibrator::CAP_ON_CALLBACK;
++    *_aidl_return = 0;
+     return ndk::ScopedAStatus::ok();
+ }
+ 

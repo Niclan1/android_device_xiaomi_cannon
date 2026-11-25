@@ -1,0 +1,25 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+// minigbm HIDL gralloc 4.0 for the MTK camera HAL on mainline kernels.
+// init.cannon.gfx.rc starts the allocator in place of vendor.gralloc-4-0 and
+// bind mounts the mapper over the MTK one.
+
+cc_binary {
+    name: "android.hardware.graphics.allocator@4.0-service.cannon",
+    defaults: ["minigbm_gralloc4_allocator_defaults"],
+    shared_libs: ["libminigbm_gralloc"],
+    init_rc: ["android.hardware.graphics.allocator@4.0-service.cannon.rc"],
+    vendor: true,
+}
+
+cc_library_shared {
+    name: "android.hardware.graphics.mapper@4.0-impl.cannon",
+    defaults: ["minigbm_gralloc4_common_defaults"],
+    shared_libs: ["libminigbm_gralloc"],
+    srcs: [":minigbm_gralloc4_mapper_files"],
+    vendor: true,
+}

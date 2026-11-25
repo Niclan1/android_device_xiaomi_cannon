@@ -1,0 +1,55 @@
+{
+  "kernel_compiled_revision": "4473da653d287a7cb0ee180cb0c132b1dc1982bf",
+  "kernel_tree": "f0cd54bad72bd6602a3bdc2409a4f6ecc4e503af",
+  "kernel_patch": "recovery/kernel-from-rom.patch",
+  "kernel_patch_sha256": "c0659d6f6f3f582f425d4aed7ee6c34b7c250565cdde1f8b92b8776b7ee068c0",
+  "kernel_config_sha256": "e837f66af8e712ee7f49b3a240fb34d9978d8687940fdc7c2c0f188cf06de498",
+  "compiler_revision": "2d4dcbff7cb42f360f368bacf51cfe711fd1cb0f",
+  "compiler": "clang-r547379",
+  "projects": [
+    {
+      "path": "bootable/recovery",
+      "base": "e684b4be08c0e695e061562bbd9a856dee2904d7",
+      "tree": "dc59dc059693f88a34cff583e7e7880bc50d9fb6",
+      "patch": "recovery/patches/bootable-recovery.patch",
+      "sha256": "35a7300eeb0f376d89186c6a8874c645bae3b8519c7e3868bd1f34d560584251",
+      "files": [
+        "data.cpp",
+        "gui/action.cpp",
+        "gui/theme/portrait_hdpi/pages/advanced.xml",
+        "gui/theme/portrait_hdpi/pages/wipe.xml",
+        "minuitwrp/graphics_drm.cpp",
+        "partitionmanager.cpp"
+      ]
+    },
+    {
+      "path": "system/core",
+      "base": "1e08a1374a2ebebd1ae828e44a53535f12c30258",
+      "tree": "6f854c3f840d7ae454f1e9ae21efee40fe085e20",
+      "patch": "recovery/patches/system-core.patch",
+      "sha256": "0c0afdaddc000457a435b4f984cf2c324dc35bc442c81ae43839f1026a3c1f7d",
+      "files": [
+        "libcutils/ashmem-dev.cpp"
+      ]
+    }
+  ],
+  "build_configuration_overrides": {
+    "OF_FL_PATH1": "/sys/class/leds/white:flash-1",
+    "note": "Applied to the final incremental data.cpp compile; persisted here in BoardConfig.mk for clean rebuilds."
+  },
+  "toolchain_overrides": {
+    "prebuilts/clang/host/linux-x86": "2d4dcbff7cb42f360f368bacf51cfe711fd1cb0f",
+    "prebuilts/rust": "3807eb51342e3949938eabd9f34a4d3d526cc5c3",
+    "prebuilts/sdk": "3b7daadc4e54d51439e5ae9b4dbd96cda8b6104e"
+  },
+  "embedded_boot_inputs": {
+    "dtb.img": {
+      "bytes": 165760,
+      "sha256": "e75534309b05c3b6ca61c0579391f1f74709a081fcafa55fab41e4260c9db550"
+    },
+    "dtbo.img": {
+      "bytes": 82496,
+      "sha256": "947c174b512ef4e5362a1c227599ced91258d14c1f0130f2f5288fc28ddfa0b7"
+    }
+  }
+}

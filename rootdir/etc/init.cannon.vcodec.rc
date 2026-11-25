@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Load after the vendor definitions so software mode never probes VCU codecs.
+service android-hardware-media-c2-hal-1-2 /vendor/bin/hw/android.hardware.media.c2@1.2-mediatek
+    override
+    disabled
+    class hal
+    user mediacodec
+    group camera drmrpc mediadrm media_rw sdcard_rw media system audio inet net_bt net_bt_admin net_bw_acct sdcard_r
+    ioprio rt 4
+    writepid /dev/cpuset/foreground/tasks
+
+service vpud /vendor/bin/vpud -f
+    override
+    disabled
+    class main
+    user media
+    group system media drmrpc

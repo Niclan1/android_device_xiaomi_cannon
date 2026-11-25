@@ -1,0 +1,142 @@
+[
+  {
+    "path": "build/make",
+    "repository": "https://github.com/LineageOS/android_build",
+    "base": "90d006387398ae6899145e6531a304500cfa0f70",
+    "compiled_revision": "ef3bd93ad85864505c3f2b0ae80151252fb5e482",
+    "reconstructed_tree": "d1bd663de8818188468593cc60521f5f12cee7e6",
+    "patch": "patches/build-make.patch",
+    "sha256": "2d14036b4c247f515a6a4fc4080b164b284575fb94b263969e34423696ddf529",
+    "tracked_workspace_changes": true
+  },
+  {
+    "path": "build/soong",
+    "repository": "https://github.com/LineageOS/android_build_soong",
+    "base": "a528a88bd553d2a449ad9338a3e944b89a164971",
+    "compiled_revision": "6df57bd36130a8b6fa69d25dfda44d42c2571894",
+    "reconstructed_tree": "2d8f7e8130c4d89bb633244ab83c18b02640e224",
+    "patch": "patches/build-soong.patch",
+    "sha256": "24538cf8287062bce9f03cde7778a891650621a43fc5c5358d5d75a1bf1dbc43",
+    "tracked_workspace_changes": true
+  },
+  {
+    "path": "device/mediatek/sepolicy_vndr",
+    "repository": "https://github.com/LineageOS/android_device_mediatek_sepolicy_vndr",
+    "base": "d76ed9b3f512decbb68f6641db86230aa595996e",
+    "compiled_revision": "8396d20dbb2fa37c91c6c7fef85863e1b6a7bdf2",
+    "reconstructed_tree": "39953ced6896ccfd8837eb828b660e1788fc59e9",
+    "patch": "patches/device-mediatek-sepolicy_vndr.patch",
+    "sha256": "3fa02cf53a4261730c87d30f83e642e157d990252c768d41c7975d5f3ffde6db",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "frameworks/base",
+    "repository": "https://github.com/LineageOS/android_frameworks_base",
+    "base": "03e13d72d00d80eeba4465893dfad669e3ad3ce6",
+    "compiled_revision": "ec6deba8732b1c72724790d02fcaad182434d3b0",
+    "reconstructed_tree": "fbe68a8d83b3cbf878c027ed248fb328fee78a2c",
+    "patch": "patches/frameworks-base.patch",
+    "sha256": "3c92941bc9fae4e92fa1e9e9684bfb73e029afce7aa46904d4b77dbf108f7ac4",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "frameworks/opt/telephony",
+    "repository": "https://github.com/LineageOS/android_frameworks_opt_telephony",
+    "base": "3e3411c08a55b32f42dd5d7cbcd10bc33c12f705",
+    "compiled_revision": "80bde5ad63384f4f8cee4afb577e2871eb38a3b3",
+    "reconstructed_tree": "f0aa513136a403b7c443323d434891377208297e",
+    "patch": "patches/frameworks-opt-telephony.patch",
+    "sha256": "5a0043739af1a9d3d596efefaad30b30249f4dbf5fbb6a08be345dfce11bd31f",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "hardware/interfaces",
+    "repository": "https://github.com/LineageOS/android_hardware_interfaces",
+    "base": "a0221f11248a924532444fc7de85d41998b9fe1e",
+    "compiled_revision": "533c5bac8a1f9ea34944d9b73385e15a09d38808",
+    "reconstructed_tree": "8940e78675d4531e93ea33723ce11194b19f32be",
+    "patch": "patches/hardware-interfaces.patch",
+    "sha256": "ae3abda1030deced627cf816fbc1f7db50347d620b638c3610255781b2e43e9d",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "hardware/lineage/interfaces",
+    "repository": "https://github.com/LineageOS/android_hardware_lineage_interfaces",
+    "base": "68dca0c523594fb7c34e94782d0f21660530a2dc",
+    "compiled_revision": "bd2c5b17d903bce15ac129e29f1d25ceb6dc88e7",
+    "reconstructed_tree": "7a9843e2692f56ed4ce1a248ddc01e11caac4a43",
+    "patch": "patches/hardware-lineage-interfaces.patch",
+    "sha256": "8449ebf6e59d8d77b0b6cd43c55f4d1dfe75a0b02d0c5bc4b49ab460eb9e1109",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "hardware/xiaomi",
+    "repository": "https://github.com/LineageOS/android_hardware_xiaomi",
+    "base": "fb0a2d51c741b4a6af3acc76a337aa4f3d7f9977",
+    "compiled_revision": "6c9601796f69415b19278689bbc0264a7d0242dc",
+    "reconstructed_tree": "33a5c5b77f234b01a30275837c23d26ce59d2bfe",
+    "patch": "patches/hardware-xiaomi.patch",
+    "sha256": "7394d18b5e399ce27df2099e154b1202b55edbefa80620504483d5fee23c3011",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "packages/modules/Bluetooth",
+    "repository": "https://github.com/LineageOS/android_packages_modules_Bluetooth",
+    "base": "298215bd30bd983a3d6fd83c790373dd557e85a5",
+    "compiled_revision": "4c42a3dc7a768c99df31649df0b1323201e6525c",
+    "reconstructed_tree": "56c5c334928e0fab3485d54d00a9e1be4d8f960e",
+    "patch": "patches/packages-modules-Bluetooth.patch",
+    "sha256": "4167493e5006b4d01332ec3264b3af6403eb89990e9e6f58c79fa79e63643db4",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "packages/modules/Connectivity",
+    "repository": "https://github.com/LineageOS/android_packages_modules_Connectivity",
+    "base": "7c04d866538e6f689823b769fb5c1e614ca0e295",
+    "compiled_revision": "a3141f6096d74809ae26242da7bd5556428d38a6",
+    "reconstructed_tree": "43a9179283356ee3a06cc4f7831aafa29826d16c",
+    "patch": "patches/packages-modules-Connectivity.patch",
+    "sha256": "796c5e797effa9a16484e84ff39732954daf4c4623597032afc1db00950e98e3",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "system/core",
+    "repository": "https://github.com/LineageOS/android_system_core",
+    "base": "65d661b1a536701e8b118be4e9728d7b5ca727c9",
+    "compiled_revision": "56cba1b9f69f41d657eddf35d8cdd700a46d541e",
+    "reconstructed_tree": "db8f95c309ccba96ead09df771ba171bbfcab5e6",
+    "patch": "patches/system-core.patch",
+    "sha256": "4f4d0cf0ae96913fd9b0d50ba9ad9cf08e3a1f6099b85bbf0a8367d18f2b1b3c",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "system/sepolicy",
+    "repository": "https://github.com/LineageOS/android_system_sepolicy",
+    "base": "d61fd80832f558d52de026097d30d695634e8b0f",
+    "compiled_revision": "55dc51a87f8013a1847504a488e38fed8c2a68f5",
+    "reconstructed_tree": "6d1ac0656c8126130e1d968899a32bb84b69d3b2",
+    "patch": "patches/system-sepolicy.patch",
+    "sha256": "480b69104e98eb187779cf023612c0a15b9663ef8822687936ca00c4daee0b5b",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "tools/extract-utils",
+    "repository": "https://github.com/LineageOS/android_tools_extract-utils",
+    "base": "78ba5d58c4b06712e18bb387a2a72eac8fbc8d70",
+    "compiled_revision": "1b9f5a551ac52454c499d997082295a714cfdbb4",
+    "reconstructed_tree": "73dae8eef5f6953805aa897864d29cd5372e8141",
+    "patch": "patches/tools-extract-utils.patch",
+    "sha256": "7a079169cb9c20351e7915bd7cb4c33904e4f15f56093b5ed47b9adb618c0d40",
+    "tracked_workspace_changes": false
+  },
+  {
+    "path": "vendor/lineage",
+    "repository": "https://github.com/LineageOS/android_vendor_lineage",
+    "base": "5a1814d916321aecb72d60d13b5e52bc719251bd",
+    "compiled_revision": "2b5b53801056b0a902175ddc29f3f87e06b45ca1",
+    "reconstructed_tree": "760aa98178bec974685222852456f67895738f4d",
+    "patch": "patches/vendor-lineage.patch",
+    "sha256": "47579917a94bfd9b4101f6989bd5170956723cbf0dd10cfe15a2f4f5b858264d",
+    "tracked_workspace_changes": false
+  }
+]

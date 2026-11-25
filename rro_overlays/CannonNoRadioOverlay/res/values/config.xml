@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <!-- Fallback when the kernel has no modem (libinit: ro.boot.cannon.radio=off) -->
+    <bool name="config_voice_capable">false</bool>
+    <bool name="config_sms_capable">false</bool>
+    <bool name="config_mobile_data_capable">false</bool>
+    <!-- The telephony features are unavailable (sku_*noradio), but keep the
+         phone process and the "phone" service: the dialer and other apps call
+         TelephonyManager (isEmergencyNumber, ...) without a feature check and
+         crash with "telephony service is null" otherwise. -->
+    <bool name="config_force_phone_globals_creation">true</bool>
+</resources>

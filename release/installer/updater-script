@@ -1,0 +1,56 @@
+assert(getprop("ro.product.device") == "cannon" || getprop("ro.build.product") == "cannon" || 
+       getprop("ro.product.device") == "cannong" || getprop("ro.build.product") == "cannong" || abort("E3004: This package is for device: cannon,cannong; this device is " + getprop("ro.product.device") + "."););
+assert(range_sha1("/dev/block/by-name/recovery", "2,0,32768") == "e882ab0ab9fdadd6d88a998e27eedaa9c3686a53" || abort("Unexpected recovery partition contents."));
+assert(range_sha1("/dev/block/by-name/dtbo", "2,0,8192") == "2947ddb672a6fc499c6dc00f48478f9f3ae32e21" || abort("Unexpected dtbo partition contents."));
+ui_print("Target: Redmi/lineage_cannon/cannon:17/CP2A.260605.016/eng.homela:userdebug/release-keys");
+package_extract_dir("install", "/tmp/install");
+set_metadata_recursive("/tmp/install", "uid", 0, "gid", 0, "dmode", 0755, "fmode", 0644);
+set_metadata_recursive("/tmp/install/bin", "uid", 0, "gid", 0, "dmode", 0755, "fmode", 0755);
+
+# --- Start patching dynamic partitions ---
+
+
+# Update dynamic partition metadata
+
+assert(update_dynamic_partitions(package_extract_file("dynamic_partitions_op_list")));
+
+# Patch partition system
+
+ui_print("Patching system image unconditionally...");
+show_progress(0.600000, 0);
+block_image_update(map_partition("system"), package_extract_file("system.transfer.list"), "system.new.dat.br", "system.patch.dat") ||
+  abort("E1001: Failed to update system image.");
+
+# Patch partition vendor
+
+ui_print("Patching vendor image unconditionally...");
+show_progress(0.100000, 0);
+block_image_update(map_partition("vendor"), package_extract_file("vendor.transfer.list"), "vendor.new.dat.br", "vendor.patch.dat") ||
+  abort("E2001: Failed to update vendor image.");
+
+# Patch partition product
+
+ui_print("Patching product image unconditionally...");
+show_progress(0.100000, 0);
+block_image_update(map_partition("product"), package_extract_file("product.transfer.list"), "product.new.dat.br", "product.patch.dat") ||
+  abort("E2001: Failed to update product image.");
+
+# Patch partition system_ext
+
+ui_print("Patching system_ext image unconditionally...");
+show_progress(0.100000, 0);
+block_image_update(map_partition("system_ext"), package_extract_file("system_ext.transfer.list"), "system_ext.new.dat.br", "system_ext.patch.dat") ||
+  abort("E2001: Failed to update system_ext image.");
+
+# --- End patching dynamic partitions ---
+
+package_extract_file("boot.img", "/dev/block/by-name/boot");
+show_progress(0.100000, 10);
+assert(range_sha1("/dev/block/by-name/boot", "2,0,16384") == "16a073c3ab1ee67abf8209f59faca4cd81f7fa32" || abort("Unexpected boot partition contents."));
+assert(package_extract_file("vbmeta_system.img", "/dev/block/by-name/vbmeta_system"));
+assert(range_sha1("/dev/block/by-name/vbmeta_system", "2,0,2048") == "6e70bcd90e199d7db435546189db76eb4ad33b53" || abort("Unexpected vbmeta_system partition contents."));
+assert(package_extract_file("vbmeta_vendor.img", "/dev/block/by-name/vbmeta_vendor"));
+assert(range_sha1("/dev/block/by-name/vbmeta_vendor", "2,0,2048") == "555b563ac8932bf99206f2c6e07bb00368c34b9d" || abort("Unexpected vbmeta_vendor partition contents."));
+assert(package_extract_file("vbmeta.img", "/dev/block/by-name/vbmeta"));
+assert(range_sha1("/dev/block/by-name/vbmeta", "2,0,2048") == "b8fdfd9cfc3e69f6924a17c7ace468cdd8c75c38" || abort("Unexpected vbmeta partition contents."));
+set_progress(1.000000);

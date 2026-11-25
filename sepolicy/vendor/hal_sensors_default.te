@@ -1,0 +1,2 @@
+# FMQ memfd handed over by system_server (labelled system_server_tmpfs)
+allow hal_sensors_default system_server_tmpfs:file { map read write };

@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
+cc_library_shared {
+    name: "libgralloc_extra",
+    stem: "libgralloc_extra",
+    vendor: true,
+    compile_multilib: "both",
+    srcs: ["gralloc_extra_dispatch.c", "gralloc_extra_mainline.c"],
+    shared_libs: ["liblog"],
+    system_shared_libs: ["libc", "libdl"],
+    stl: "none",
+    version_script: "exports.map",
+    cflags: ["-Wall", "-Wextra", "-Werror"],
+}

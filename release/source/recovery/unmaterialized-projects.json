@@ -1,0 +1,5 @@
+[
+  "prebuilts/clang/host/linux-x86",
+  "prebuilts/rust",
+  "prebuilts/sdk"
+]

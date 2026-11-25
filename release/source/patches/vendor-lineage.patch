@@ -1,0 +1,45 @@
+diff --git a/release/flag_values/cp2a/RELEASE_PLATFORM_SECURITY_PATCH.textproto b/release/flag_values/cp2a/RELEASE_PLATFORM_SECURITY_PATCH.textproto
+index ebdbe0b79704d0f9ac4e6fb205e57a7e90757fe7..8d173bc0645c5577291559d20a12ce69baeee797 100644
+--- a/release/flag_values/cp2a/RELEASE_PLATFORM_SECURITY_PATCH.textproto
++++ b/release/flag_values/cp2a/RELEASE_PLATFORM_SECURITY_PATCH.textproto
+@@ -1,4 +1,4 @@
+ name: "RELEASE_PLATFORM_SECURITY_PATCH"
+ value {
+-  string_value: "2026-11-01"
++  string_value: "2026-10-01"
+ }
+diff --git a/tools/clean_headers.sh b/tools/clean_headers.sh
+index 3a12160ca13e86048391c781787331ed913e93d9..99b2c4ad8b1fb0d0dabb7c5284dfd419283436ea 100755
+--- a/tools/clean_headers.sh
++++ b/tools/clean_headers.sh
+@@ -7,3 +7,30 @@ export ANDROID_BUILD_TOP="$PWD"
+     "$1/usr/include/asm/signal.h" \
+     "$1/usr/include/asm-generic/signal.h" \
+     "$1/usr/include/linux/eventpoll.h"
++
++# Bionic owns the POSIX sched_param definition. Older kernel exports still
++# declare it in linux/sched/types.h; retain sched_attr and all custom UAPI.
++if [ -f "$1/usr/include/linux/sched/types.h" ]; then
++    python3 - "$1/usr/include/linux/sched/types.h" <<'PY'
++import pathlib
++import re
++import sys
++sys.path.insert(0, "bionic/libc/kernel/tools")
++import cpp
++from utils import StringOutput
++path = pathlib.Path(sys.argv[1])
++text = path.read_text()
++if re.search(r"\bstruct\s+sched_param\s*\{", text):
++    parser = cpp.BlockParser()
++    blocks = parser.parseFile(str(path))
++    if not parser.parsed:
++        raise RuntimeError("Cannot parse exported scheduler header")
++    blocks.removeStructs({"sched_param": None})
++    output = StringOutput()
++    blocks.write(output)
++    cleaned = output.get()
++    if re.search(r"\bstruct\s+sched_param\s*\{", cleaned):
++        raise RuntimeError("Duplicate scheduler type survived parser cleanup")
++    path.write_text(cleaned)
++PY
++fi

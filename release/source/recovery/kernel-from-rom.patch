@@ -1,0 +1,547 @@
+diff --git a/Documentation/devicetree/bindings/usb/mediatek,mt6360-tcpc.yaml b/Documentation/devicetree/bindings/usb/mediatek,mt6360-tcpc.yaml
+index f797d365a971f21868f318f7f4bdb56f31b7833e..053264e605836d7875493a37f7ac92fa5dce2dc6 100644
+--- a/Documentation/devicetree/bindings/usb/mediatek,mt6360-tcpc.yaml
++++ b/Documentation/devicetree/bindings/usb/mediatek,mt6360-tcpc.yaml
+@@ -26,9 +26,6 @@ properties:
+     items:
+       - const: PD_IRQB
+ 
+-  vbus-supply:
+-    description: Optional regulator for the connector's source VBUS.
+-
+   connector:
+     type: object
+     $ref: ../connector/usb-connector.yaml#
+diff --git a/Documentation/devicetree/bindings/usb/mediatek,mtk-xhci.yaml b/Documentation/devicetree/bindings/usb/mediatek,mtk-xhci.yaml
+index eb3f96b52403fa7fec27555fa961a26eabf24e99..004d3ebec091904ea7d17a4e92f87c3fec610e43 100644
+--- a/Documentation/devicetree/bindings/usb/mediatek,mtk-xhci.yaml
++++ b/Documentation/devicetree/bindings/usb/mediatek,mtk-xhci.yaml
+@@ -25,7 +25,6 @@ properties:
+       - enum:
+           - mediatek,mt2701-xhci
+           - mediatek,mt2712-xhci
+-          - mediatek,mt6853-xhci
+           - mediatek,mt7622-xhci
+           - mediatek,mt7623-xhci
+           - mediatek,mt7629-xhci
+diff --git a/MAINTAINERS b/MAINTAINERS
+index e5b160685e881d353b0820adf1371bb0a91596f6..0814ca82563c76266fd59c4521b80930a443b6c5 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -26738,7 +26738,6 @@ F:	Documentation/ABI/testing/sysfs-class-typec
+ F:	Documentation/driver-api/usb/typec.rst
+ F:	drivers/usb/typec/
+ F:	include/linux/usb/typec.h
+-F:	tools/testing/mt6360-tcpc-vbus/
+ 
+ USB TYPEC INTEL PMC MUX DRIVER
+ M:	Heikki Krogerus <heikki.krogerus@linux.intel.com>
+diff --git a/arch/arm64/boot/dts/mediatek/mt6853-cannong-j22-42-02-0a.dtso b/arch/arm64/boot/dts/mediatek/mt6853-cannong-j22-42-02-0a.dtso
+index 61b598b3fec85443ca57e0559f63185075779896..378af6371368224a56a4283e78425f6d69449948 100644
+--- a/arch/arm64/boot/dts/mediatek/mt6853-cannong-j22-42-02-0a.dtso
++++ b/arch/arm64/boot/dts/mediatek/mt6853-cannong-j22-42-02-0a.dtso
+@@ -2,15 +2,6 @@
+ /plugin/;
+ 
+ #include <dt-bindings/phy/phy.h>
+-#include <dt-bindings/interrupt-controller/irq.h>
+-#include <dt-bindings/usb/pd.h>
+-
+-&{/} {
+-	/* Prevent LK's legacy controller from being imported over the same IP. */
+-	mtu3_0@11200000 {
+-		status = "disabled";
+-	};
+-};
+ 
+ &i2c7 {
+ 	#address-cells = <1>;
+@@ -112,38 +103,6 @@ charger {
+ 		/* DP/DM switch for BC1.2, stock Charger_Detect_Init/Release */
+ 		phys = <&u2port0 PHY_TYPE_USB2>;
+ 		phy-names = "usb";
+-
+-		cannong_otg_vbus: usb-otg-vbus-regulator {
+-			regulator-name = "usb-otg-vbus";
+-			regulator-min-microvolt = <5000000>;
+-			regulator-max-microvolt = <5000000>;
+-		};
+-	};
+-
+-	tcpc {
+-		compatible = "mediatek,mt6360-tcpc";
+-		interrupts-extended = <&pio 9 IRQ_TYPE_LEVEL_LOW>;
+-		interrupt-names = "PD_IRQB";
+-		vbus-supply = <&cannong_otg_vbus>;
+-
+-		connector {
+-			compatible = "usb-c-connector";
+-			label = "USB-C";
+-			data-role = "dual";
+-			power-role = "dual";
+-			try-power-role = "sink";
+-			source-pdos = <PDO_FIXED(5000, 500, PDO_FIXED_DUAL_ROLE |
+-						PDO_FIXED_DATA_SWAP | PDO_FIXED_USB_COMM)>;
+-			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_DUAL_ROLE |
+-					      PDO_FIXED_DATA_SWAP | PDO_FIXED_USB_COMM)>;
+-			op-sink-microwatt = <2500000>;
+-
+-			port {
+-				cannong_typec_hs: endpoint {
+-					remote-endpoint = <&cannong_usb_hs>;
+-				};
+-			};
+-		};
+ 	};
+ 
+ 	regulator {
+@@ -228,32 +187,6 @@ mt6360_fled1: led@4 {
+ 	};
+ };
+ 
+-/* TCPM owns source VBUS, independently of the USB controller's data role. */
+-&mtu3_0 {
+-	dr_mode = "otg";
+-	usb-role-switch;
+-	role-switch-default-mode = "peripheral";
+-	#address-cells = <1>;
+-	#size-cells = <1>;
+-	ranges;
+-
+-	usb@11200000 {
+-		compatible = "mediatek,mt6853-xhci", "mediatek,mtk-xhci";
+-		reg = <0x11200000 0x1000>;
+-		reg-names = "mac";
+-		interrupts = <0 97 IRQ_TYPE_LEVEL_HIGH>;
+-		clocks = <&infracfg_ao_clk 0x28>, <&apmixed_clk 0x0e>;
+-		clock-names = "sys_ck", "ref_ck";
+-		vusb33-supply = <&mt_pmic_vusb_ldo_reg>;
+-	};
+-
+-	port {
+-		cannong_usb_hs: endpoint {
+-			remote-endpoint = <&cannong_typec_hs>;
+-		};
+-	};
+-};
+-
+ /*
+  * NT36672A TDDI touch on SPI4 CS0. The stock overlay only has a placeholder
+  * node there; turn it into the touch controller and tie it to the panel so
+diff --git a/arch/arm64/configs/cannong_defconfig b/arch/arm64/configs/cannong_defconfig
+index d2a7995f16b7ea4a9957fa77595302d704b909ef..090445ede2cb63fd6b4e57a8af9100c0a1ecf9e0 100644
+--- a/arch/arm64/configs/cannong_defconfig
++++ b/arch/arm64/configs/cannong_defconfig
+@@ -620,7 +620,6 @@ CONFIG_ANDROID_USB_CONFIGFS_F_ACC=y
+ CONFIG_TYPEC=y
+ CONFIG_TYPEC_TCPM=y
+ CONFIG_TYPEC_TCPCI=y
+-CONFIG_TYPEC_MT6360=y
+ CONFIG_TYPEC_UCSI=y
+ CONFIG_TYPEC_DP_ALTMODE=y
+ CONFIG_TYPEC_TBT_ALTMODE=y
+diff --git a/drivers/i2c/busses/i2c-mt65xx.c b/drivers/i2c/busses/i2c-mt65xx.c
+index 7345f28c94597bb30fdba5736d00cbe06d494df1..3c6329dd9703ef988d3e04b887a3f466bc542123 100644
+--- a/drivers/i2c/busses/i2c-mt65xx.c
++++ b/drivers/i2c/busses/i2c-mt65xx.c
+@@ -1554,12 +1554,12 @@ static int mtk_i2c_probe(struct platform_device *pdev)
+ 	i2c->adap.quirks = i2c->dev_comp->quirks;
+ 	i2c->adap.timeout = 2 * HZ;
+ 	i2c->adap.retries = 1;
+-	/* Do not mistake a child's VBUS source for the adapter's own supply. */
+-	if (of_property_present(pdev->dev.of_node, "vbus-supply")) {
+-		i2c->adap.bus_regulator = devm_regulator_get_optional(&pdev->dev, "vbus");
+-		if (IS_ERR(i2c->adap.bus_regulator))
+-			return dev_err_probe(&pdev->dev, PTR_ERR(i2c->adap.bus_regulator),
+-					     "Cannot get I2C bus supply\n");
++	i2c->adap.bus_regulator = devm_regulator_get_optional(&pdev->dev, "vbus");
++	if (IS_ERR(i2c->adap.bus_regulator)) {
++		if (PTR_ERR(i2c->adap.bus_regulator) == -ENODEV)
++			i2c->adap.bus_regulator = NULL;
++		else
++			return PTR_ERR(i2c->adap.bus_regulator);
+ 	}
+ 
+ 	ret = mtk_i2c_parse_dt(pdev->dev.of_node, i2c);
+diff --git a/drivers/usb/typec/tcpm/tcpci_mt6360.c b/drivers/usb/typec/tcpm/tcpci_mt6360.c
+index 0a49d919ea4fad2bcc2b873efb97c76a73a844a6..881ffacbfd7737c5dbe70a7b82117da7d123ddb8 100644
+--- a/drivers/usb/typec/tcpm/tcpci_mt6360.c
++++ b/drivers/usb/typec/tcpm/tcpci_mt6360.c
+@@ -11,7 +11,6 @@
+ #include <linux/of.h>
+ #include <linux/platform_device.h>
+ #include <linux/regmap.h>
+-#include <linux/regulator/consumer.h>
+ #include <linux/usb/tcpci.h>
+ #include <linux/usb/tcpm.h>
+ 
+@@ -41,41 +40,9 @@ struct mt6360_tcpc_info {
+ 	struct tcpci_data tdata;
+ 	struct tcpci *tcpci;
+ 	struct device *dev;
+-	struct regulator *vbus;
+-	bool vbus_on;
+ 	int irq;
+ };
+ 
+-static int mt6360_tcpc_set_vbus(struct tcpci *tcpci, struct tcpci_data *tdata,
+-			      bool source, bool sink)
+-{
+-	struct mt6360_tcpc_info *mti =
+-		container_of(tdata, struct mt6360_tcpc_info, tdata);
+-	int ret;
+-
+-	if (source == mti->vbus_on)
+-		return 0;
+-
+-	if (source)
+-		ret = regulator_enable(mti->vbus);
+-	else
+-		ret = regulator_disable(mti->vbus);
+-	if (!ret)
+-		mti->vbus_on = source;
+-
+-	return ret;
+-}
+-
+-static void mt6360_tcpc_disable_vbus(void *data)
+-{
+-	struct mt6360_tcpc_info *mti = data;
+-	int ret;
+-
+-	ret = mt6360_tcpc_set_vbus(mti->tcpci, &mti->tdata, false, false);
+-	if (ret)
+-		dev_warn(mti->dev, "Failed to disable source VBUS: %d\n", ret);
+-}
+-
+ static inline int mt6360_tcpc_write16(struct regmap *regmap,
+ 				      unsigned int reg, u16 val)
+ {
+@@ -85,10 +52,6 @@ static inline int mt6360_tcpc_write16(struct regmap *regmap,
+ static int mt6360_tcpc_init(struct tcpci *tcpci, struct tcpci_data *tdata)
+ {
+ 	struct regmap *regmap = tdata->regmap;
+-	u16 alert_mask = TCPC_ALERT_TX_SUCCESS | TCPC_ALERT_TX_FAILED |
+-			 TCPC_ALERT_TX_DISCARDED | TCPC_ALERT_RX_STATUS |
+-			 TCPC_ALERT_RX_HARD_RST | TCPC_ALERT_CC_STATUS |
+-			 TCPC_ALERT_POWER_STATUS;
+ 	int ret;
+ 
+ 	ret = regmap_write(regmap, MT6360_REG_SWRESET, 0x01);
+@@ -163,12 +126,7 @@ static int mt6360_tcpc_init(struct tcpci *tcpci, struct tcpci_data *tdata)
+ 		return ret;
+ 
+ 	/* Set shipping mode off, AUTOIDLE on */
+-	ret = regmap_write(regmap, MT6360_REG_MODECTRL2, 0x7A);
+-	if (ret)
+-		return ret;
+-
+-	/* The shared TCPCI init only caches its mask; restore it after reset. */
+-	return mt6360_tcpc_write16(regmap, TCPC_ALERT_MASK, alert_mask);
++	return regmap_write(regmap, MT6360_REG_MODECTRL2, 0x7A);
+ }
+ 
+ static irqreturn_t mt6360_irq(int irq, void *dev_id)
+@@ -199,18 +157,6 @@ static int mt6360_tcpc_probe(struct platform_device *pdev)
+ 	if (mti->irq < 0)
+ 		return mti->irq;
+ 
+-	mti->vbus = devm_regulator_get_optional(mti->dev, "vbus");
+-	if (IS_ERR(mti->vbus)) {
+-		ret = PTR_ERR(mti->vbus);
+-		if (ret != -ENODEV)
+-			return dev_err_probe(mti->dev, ret, "Failed to get source VBUS\n");
+-	} else {
+-		mti->tdata.set_vbus = mt6360_tcpc_set_vbus;
+-		ret = devm_add_action_or_reset(mti->dev, mt6360_tcpc_disable_vbus, mti);
+-		if (ret)
+-			return ret;
+-	}
+-
+ 	mti->tdata.init = mt6360_tcpc_init;
+ 	mti->tcpci = tcpci_register_port(&pdev->dev, &mti->tdata);
+ 	if (IS_ERR(mti->tcpci)) {
+diff --git a/tools/testing/mt6360-tcpc-vbus/test.py b/tools/testing/mt6360-tcpc-vbus/test.py
+deleted file mode 100755
+index b6000da4a444a87048136ec915c39f82593e3560..0000000000000000000000000000000000000000
+--- a/tools/testing/mt6360-tcpc-vbus/test.py
++++ /dev/null
+@@ -1,278 +0,0 @@
+-#!/usr/bin/env python3
+-# SPDX-License-Identifier: GPL-2.0
+-"""Exercise MT6360 source power, attach interrupts and parent I2C supply."""
+-
+-import os
+-from pathlib import Path
+-import re
+-import subprocess
+-import tempfile
+-import unittest
+-
+-
+-ROOT = Path(__file__).resolve().parents[3]
+-SOURCE = ROOT / "drivers/usb/typec/tcpm/tcpci_mt6360.c"
+-
+-
+-class VbusTest(unittest.TestCase):
+-    def test_attach_interrupts_survive_initialization_and_reset(self):
+-        source = SOURCE.read_text()
+-        functions = []
+-        for name in ("mt6360_tcpc_write16", "mt6360_tcpc_init"):
+-            body = re.search(
+-                rf"^static (?:inline )?int {name}\(.*?^\}}",
+-                source,
+-                re.MULTILINE | re.DOTALL,
+-            )
+-            self.assertIsNotNone(body, f"{name} was not found")
+-            functions.append(body[0])
+-        header = (ROOT / "include/linux/usb/tcpci.h").read_text()
+-        defines = re.findall(r"^#define MT6360[^\n]+", source, re.MULTILINE)
+-        defines += re.findall(r"^#define TCPC_ALERT[^\n]+", header, re.MULTILINE)
+-        harness = r"""
+-#include <assert.h>
+-#include <stdbool.h>
+-#include <stdint.h>
+-#include <string.h>
+-#include <errno.h>
+-
+-typedef uint16_t u16;
+-#define BIT(n) (1U << (n))
+-DEFINES
+-struct regmap {
+-	unsigned char registers[256];
+-	bool fail_unmask;
+-	int fail_register;
+-};
+-struct tcpci {};
+-struct tcpci_data { struct regmap *regmap; };
+-static void usleep_range(int min, int max) {}
+-static int regmap_write(struct regmap *map, unsigned int reg, unsigned int val)
+-{
+-	if ((int)reg == map->fail_register)
+-		return -EIO;
+-	if (reg == MT6360_REG_SWRESET)
+-		memset(map->registers, 0, sizeof(map->registers));
+-	map->registers[reg] = val;
+-	return 0;
+-}
+-static int regmap_raw_write(struct regmap *map, unsigned int reg,
+-			    const void *value, size_t size)
+-{
+-	u16 val;
+-
+-	assert(size == sizeof(val));
+-	memcpy(&val, value, size);
+-	if (reg == TCPC_ALERT_MASK && val && map->fail_unmask)
+-		return -EIO;
+-	map->registers[reg] = val;
+-	map->registers[reg + 1] = val >> 8;
+-	return 0;
+-}
+-static int regmap_update_bits(struct regmap *map, unsigned int reg,
+-			      unsigned int mask, unsigned int val)
+-{
+-	return regmap_write(map, reg, (map->registers[reg] & ~mask) | val);
+-}
+-FUNCTIONS
+-static bool cable_event_reaches_irq(struct regmap *map, u16 event)
+-{
+-	u16 mask = map->registers[TCPC_ALERT_MASK] |
+-		   map->registers[TCPC_ALERT_MASK + 1] << 8;
+-
+-	return !!(mask & event);
+-}
+-int main(void)
+-{
+-	struct regmap map = { .fail_register = -1 };
+-	struct tcpci_data data = { .regmap = &map };
+-	int i;
+-
+-	/* Both cold boot and TCPM recovery reset must deliver cable changes. */
+-	for (i = 0; i < 2; i++) {
+-		assert(mt6360_tcpc_init(NULL, &data) == 0);
+-		assert(cable_event_reaches_irq(&map, TCPC_ALERT_CC_STATUS));
+-		assert(cable_event_reaches_irq(&map, TCPC_ALERT_POWER_STATUS));
+-	}
+-
+-	/* A port with masked interrupts must not report successful setup. */
+-	map.fail_unmask = true;
+-	assert(mt6360_tcpc_init(NULL, &data) == -EIO);
+-	assert(!cable_event_reaches_irq(&map, TCPC_ALERT_CC_STATUS));
+-	map.fail_unmask = false;
+-	map.fail_register = MT6360_REG_MODECTRL2;
+-	assert(mt6360_tcpc_init(NULL, &data) == -EIO);
+-	assert(!cable_event_reaches_irq(&map, TCPC_ALERT_CC_STATUS));
+-	return 0;
+-}
+-"""
+-        self.run_harness(
+-            harness.replace("DEFINES", "\n".join(defines)).replace(
+-                "FUNCTIONS", "\n".join(functions)
+-            )
+-        )
+-
+-    def test_role_changes_and_regulator_failures(self):
+-        body = re.search(
+-            r"^static int mt6360_tcpc_set_vbus\(.*?^\}",
+-            SOURCE.read_text(),
+-            re.MULTILINE | re.DOTALL,
+-        )
+-        self.assertIsNotNone(body, "source VBUS must be owned by TCPM")
+-        harness = r"""
+-#include <assert.h>
+-#include <stdbool.h>
+-#include <stddef.h>
+-#include <errno.h>
+-
+-struct tcpci {};
+-struct tcpci_data {};
+-struct regulator {
+-	int enables;
+-	int disables;
+-	int result;
+-};
+-struct mt6360_tcpc_info {
+-	struct tcpci_data tdata;
+-	struct regulator *vbus;
+-	bool vbus_on;
+-};
+-#define container_of(p, t, m) ((t *)((char *)(p) - offsetof(t, m)))
+-static int regulator_enable(struct regulator *r)
+-{
+-	r->enables++;
+-	return r->result;
+-}
+-static int regulator_disable(struct regulator *r)
+-{
+-	r->disables++;
+-	return r->result;
+-}
+-CALLBACK
+-int main(void)
+-{
+-	struct regulator r = {};
+-	struct mt6360_tcpc_info m = { .vbus = &r };
+-
+-	/* A sink and repeated role notifications must not change source power. */
+-	assert(mt6360_tcpc_set_vbus(NULL, &m.tdata, false, true) == 0);
+-	assert(!r.enables && !r.disables && !m.vbus_on);
+-	assert(mt6360_tcpc_set_vbus(NULL, &m.tdata, true, false) == 0);
+-	assert(mt6360_tcpc_set_vbus(NULL, &m.tdata, true, false) == 0);
+-	assert(r.enables == 1 && !r.disables && m.vbus_on);
+-	assert(mt6360_tcpc_set_vbus(NULL, &m.tdata, false, true) == 0);
+-	assert(mt6360_tcpc_set_vbus(NULL, &m.tdata, false, true) == 0);
+-	assert(r.disables == 1 && !m.vbus_on);
+-
+-	/* Failed enables must be reported and remain retryable. */
+-	r.result = -EIO;
+-	assert(mt6360_tcpc_set_vbus(NULL, &m.tdata, true, false) == -EIO);
+-	assert(!m.vbus_on);
+-	r.result = 0;
+-	assert(mt6360_tcpc_set_vbus(NULL, &m.tdata, true, false) == 0);
+-	assert(r.enables == 3 && m.vbus_on);
+-
+-	/* Failed disables must not falsely report that VBUS is off. */
+-	r.result = -EIO;
+-	assert(mt6360_tcpc_set_vbus(NULL, &m.tdata, false, true) == -EIO);
+-	assert(m.vbus_on);
+-	r.result = 0;
+-	assert(mt6360_tcpc_set_vbus(NULL, &m.tdata, false, true) == 0);
+-	assert(r.disables == 3 && !m.vbus_on);
+-	return 0;
+-}
+-"""
+-        self.run_harness(harness.replace("CALLBACK", body[0]))
+-
+-    def test_i2c_supply_must_not_come_from_its_child(self):
+-        source = ROOT / "drivers/i2c/busses/i2c-mt65xx.c"
+-        body = re.search(
+-            r"i2c->adap.retries = 1;\n(.*?)\n\s*ret = mtk_i2c_parse_dt",
+-            source.read_text(),
+-            re.DOTALL,
+-        )
+-        self.assertIsNotNone(body, "I2C probe supply lookup was not found")
+-        harness = r"""
+-#include <assert.h>
+-#include <stdbool.h>
+-#include <stddef.h>
+-#include <errno.h>
+-
+-#define EPROBE_DEFER 517
+-struct regulator {};
+-struct device_node { bool own_supply; };
+-struct device { struct device_node *of_node; };
+-struct platform_device { struct device dev; };
+-struct i2c_adapter { struct regulator *bus_regulator; };
+-struct mtk_i2c { struct i2c_adapter adap; };
+-static struct regulator rail, error;
+-static int lookup_count, lookup_error;
+-#define IS_ERR(p) ((p) == &error)
+-#define PTR_ERR(p) (lookup_error)
+-static inline bool of_property_present(struct device_node *node, const char *name)
+-{
+-	return node->own_supply;
+-}
+-static struct regulator *devm_regulator_get_optional(struct device *dev,
+-						    const char *name)
+-{
+-	lookup_count++;
+-	return lookup_error ? &error : &rail;
+-}
+-static inline int dev_err_probe(struct device *dev, int err, const char *fmt)
+-{
+-	return err;
+-}
+-static int probe_supply(struct platform_device *pdev, struct mtk_i2c *i2c)
+-{
+-SUPPLY_LOOKUP
+-	return 0;
+-}
+-int main(void)
+-{
+-	struct device_node node = {};
+-	struct platform_device pdev = { .dev.of_node = &node };
+-	struct mtk_i2c i2c = {};
+-
+-	/* A child boost cannot exist until its parent adapter has registered. */
+-	lookup_error = -EPROBE_DEFER;
+-	assert(probe_supply(&pdev, &i2c) == 0);
+-	assert(!lookup_count && !i2c.adap.bus_regulator);
+-
+-	node.own_supply = true;
+-	assert(probe_supply(&pdev, &i2c) == -EPROBE_DEFER);
+-	assert(lookup_count == 1);
+-	lookup_error = -ENODEV;
+-	assert(probe_supply(&pdev, &i2c) == -ENODEV);
+-	assert(lookup_count == 2);
+-	lookup_error = 0;
+-	assert(probe_supply(&pdev, &i2c) == 0);
+-	assert(lookup_count == 3 && i2c.adap.bus_regulator == &rail);
+-	return 0;
+-}
+-"""
+-        self.run_harness(harness.replace("SUPPLY_LOOKUP", body[1]))
+-
+-    def run_harness(self, harness):
+-        with tempfile.TemporaryDirectory(prefix="mt6360-vbus-test-") as tmp:
+-            src = Path(tmp) / "test.c"
+-            exe = Path(tmp) / "test"
+-            src.write_text(harness)
+-            subprocess.run(
+-                [
+-                    os.environ.get("CC", "cc"),
+-                    "-Wall",
+-                    "-Wextra",
+-                    "-Werror",
+-                    "-Wno-unused-parameter",
+-                    "-o",
+-                    str(exe),
+-                    str(src),
+-                ],
+-                check=True,
+-            )
+-            subprocess.run([str(exe)], check=True, cwd=tmp)
+-
+-
+-if __name__ == "__main__":
+-    unittest.main()

@@ -53,6 +53,7 @@
 /dev/gps                  0660   gps        system
 /dev/fw_log_gps           0660   gps        gps
 /dev/gps_emi              0660   gps        gps
+/dev/gps_pwr              0660   gps        gps
 
 # ANT
 /dev/stpant               0660   system     system
@@ -132,6 +133,8 @@
 # SGX device node
 /dev/pvrsrvkm             0666   root       root
 /dev/pvr_sync             0666   root       root
+/dev/mdp_sync             0640   system     system
+/dev/fmt_sync             0640   system     system
 
 
 /sys/devices/platform/leds-mt65xx/leds/green   delay_on      0664  system   system
@@ -156,7 +159,6 @@
 
 # Change ION driver permission
 /dev/ion                  0666   system     graphics
-
 # Change DMA_HEAP deice permission
 #     refs: /system/core/rootdir/uevent.rc
 #           /dev/dma_heap/system      0444   system     system
@@ -178,3 +180,32 @@
 /dev/ttyACM0              0660   radio      radio
 
 /dev/xlog                 0660   system     audio
+
+# MTK camera (imgsensor, seninf, ISP, lens, EEPROM, CCU). init.mt6853.rc sets
+# the same owner/mode on boot; this also covers nodes that appear later
+# (deferred probe or a camera driver bound after boot).
+/dev/camera-sysram        0660   system     camera
+/dev/camera-isp           0660   system     camera
+/dev/camera-mem           0660   system     camera
+/dev/camera-dip           0660   system     camera
+/dev/camera-tsf           0660   system     camera
+/dev/camera-dpe           0660   system     camera
+/dev/camera-mfb           0660   system     camera
+/dev/camera-rsc           0660   system     camera
+/dev/camera-owe           0660   system     camera
+/dev/camera-fdvt          0660   system     camera
+/dev/camera-wpe           0660   system     camera
+/dev/camera-pipemgr       0660   system     camera
+/dev/kd_camera_hw         0660   system     camera
+/dev/kd_camera_hw_bus2    0660   system     camera
+/dev/seninf               0660   system     camera
+/dev/flashlight           0660   system     camera
+/dev/FM50AF               0660   system     camera
+/dev/CAM_CAL_DRV          0660   system     camera
+/dev/MAINAF               0660   system     camera
+/dev/MAIN2AF              0660   system     camera
+/dev/MAIN3AF              0660   system     camera
+/dev/SUBAF                0660   system     camera
+/dev/ccu                  0660   system     camera
+/dev/mtk_mdp              0660   system     camera
+/dev/mtk_mdp_limit        0660   system     camera

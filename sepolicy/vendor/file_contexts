@@ -31,3 +31,19 @@
 
 # Mlipay
 /vendor/bin/mlipayd@1\.1                                                u:object_r:hal_mlipay_default_exec:s0
+
+# SwiftShader (mainline kernels)
+/vendor/lib(64)?/hw/vulkan\.pastel\.so                                   u:object_r:same_process_hal_file:s0
+/dev/mtk_mdp_limit                                 u:object_r:mtk_mdp_device:s0
+
+# Retained legacy gralloc-extra, loaded by the normal wrapper.
+/vendor/lib(64)?/libgralloc_extra_cannon_legacy\.so u:object_r:same_process_hal_file:s0
+
+# DRM primary and render nodes on mainline kernels.
+/dev/dri/(card[0-9]+|renderD[0-9]+)                 u:object_r:gpu_device:s0
+
+# minigbm gralloc core, loaded by the mapper in sphal clients
+/vendor/lib(64)?/libminigbm_gralloc\.so                u:object_r:same_process_hal_file:s0
+/vendor/lib(64)?/hw/gralloc\.minigbm\.so              u:object_r:same_process_hal_file:s0
+/vendor/bin/hw/android\.hardware\.graphics\.allocator@4\.0-service\.cannon u:object_r:hal_graphics_allocator_default_exec:s0
+/vendor/lib(64)?/hw/android\.hardware\.graphics\.mapper@4\.0-impl\.cannon\.so u:object_r:same_process_hal_file:s0

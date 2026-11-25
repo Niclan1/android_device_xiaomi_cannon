@@ -1,0 +1,5 @@
+# MemoryHeapBase buffers received from AudioTrack and system services.
+allow audioserver { appdomain_tmpfs system_server_tmpfs }:file { map read write };
+
+# The legacy HAL passes ALSA PCM FDs for SRAM-backed AAudio MMAP streams.
+allow audioserver audio_device:chr_file map;

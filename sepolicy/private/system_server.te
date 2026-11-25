@@ -1,0 +1,6 @@
+# memfds received from apps and HALs are labelled plain tmpfs on mainline
+# kernels (no ashmem, no policycap memfd_class)
+allow system_server tmpfs:file { getattr map read };
+
+# MemoryHeapBase received from audioserver.
+allow system_server audioserver_tmpfs:file read;

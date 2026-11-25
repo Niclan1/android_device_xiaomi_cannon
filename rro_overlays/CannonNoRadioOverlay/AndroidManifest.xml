@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="android.overlay.cannon.noradio">
+
+    <overlay
+        android:isStatic="true"
+        android:priority="900"
+        android:requiredSystemPropertyName="ro.boot.cannon.radio"
+        android:requiredSystemPropertyValue="off"
+        android:targetPackage="android" />
+</manifest>

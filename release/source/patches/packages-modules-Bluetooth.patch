@@ -1,0 +1,521 @@
+diff --git a/system/gd/hci/acl_manager/acl_manager_classic_impl_test.cc b/system/gd/hci/acl_manager/acl_manager_classic_impl_test.cc
+index e2129a9d4b366f362ded8b410bcaab0311c9a23d..77c966670da6eb5ad0275b4962e2aed88e7edc8d 100644
+--- a/system/gd/hci/acl_manager/acl_manager_classic_impl_test.cc
++++ b/system/gd/hci/acl_manager/acl_manager_classic_impl_test.cc
+@@ -605,6 +605,17 @@ TEST_F(AclManagerClassicWithConnectionTest, send_sniff_subrating) {
+   sync_client_handler();
+ }
+ 
++TEST_F(AclManagerClassicWithConnectionTest, send_sniff_subrating_command_status) {
++  for (auto status : {ErrorCode::SUCCESS, ErrorCode::UNKNOWN_CONNECTION}) {
++    ASSERT_TRUE(connection_->SniffSubrating(0x1234, 0x1235, 0x1236));
++    auto packet = GetConnectionManagementCommand(OpCode::SNIFF_SUBRATING);
++    ASSERT_TRUE(SniffSubratingView::Create(packet).IsValid());
++    test_hci_layer_->IncomingEvent(CommandStatusBuilder::Create(status, 1, OpCode::SNIFF_SUBRATING,
++                                                                std::make_unique<RawBuilder>()));
++    sync_client_handler();
++  }
++}
++
+ TEST_F(AclManagerClassicWithConnectionTest, send_read_automatic_flush_timeout) {
+   connection_->ReadAutomaticFlushTimeout();
+   auto packet = GetConnectionManagementCommand(OpCode::READ_AUTOMATIC_FLUSH_TIMEOUT);
+diff --git a/system/gd/hci/acl_manager/classic_acl_connection.cc b/system/gd/hci/acl_manager/classic_acl_connection.cc
+index 146d3e8c39ba5daa2e9c9513c4fe9a491335c5af..3a34ca227e9804760521490466280e3ca6c2a6e4 100644
+--- a/system/gd/hci/acl_manager/classic_acl_connection.cc
++++ b/system/gd/hci/acl_manager/classic_acl_connection.cc
+@@ -21,6 +21,8 @@
+ #include <bluetooth/metrics/os_metrics.h>
+ #include <com_android_bluetooth_flags.h>
+ 
++#include <variant>
++
+ #include "hci/address.h"
+ #include "hci/event_checkers.h"
+ 
+@@ -489,10 +491,17 @@ bool ClassicAclConnection::FlowSpecification(FlowDirection flow_direction, Servi
+ 
+ bool ClassicAclConnection::SniffSubrating(uint16_t maximum_latency, uint16_t minimum_remote_timeout,
+                                           uint16_t minimum_local_timeout) {
++  // Some controllers acknowledge this command with Command Status instead.
+   acl_connection_interface_->EnqueueCommand(
+           SniffSubratingBuilder::Create(handle_, maximum_latency, minimum_remote_timeout,
+                                         minimum_local_timeout),
+-          pimpl_->tracker.client_handler_->BindOnce(check_complete<SniffSubratingCompleteView>));
++          pimpl_->tracker.client_handler_->BindOnce([](CommandStatusOrCompleteView response) {
++            if (auto* status = std::get_if<CommandStatusView>(&response)) {
++              check_status<CommandStatusView>(*status);
++            } else {
++              check_complete<SniffSubratingCompleteView>(std::get<CommandCompleteView>(response));
++            }
++          }));
+   return true;
+ }
+ 
+diff --git a/system/gd/hci/hci_layer_fake.cc b/system/gd/hci/hci_layer_fake.cc
+index d6463e2fd018525dd44eea913f42f6c13207cffd..af533be998b8c0e7bba0130f07b12ea5c8c78ce4 100644
+--- a/system/gd/hci/hci_layer_fake.cc
++++ b/system/gd/hci/hci_layer_fake.cc
+@@ -21,6 +21,7 @@
+ #include <gmock/gmock.h>
+ #include <gtest/gtest.h>
+ 
++#include <algorithm>
+ #include <chrono>
+ #include <future>
+ 
+@@ -59,8 +60,8 @@ static std::unique_ptr<AclBuilder> NextAclPacket(uint16_t handle) {
+   return AclBuilder::Create(handle, packet_boundary_flag, broadcast_flag, NextPayload(handle));
+ }
+ 
+-static void DebugPrintCommandOpcode(std::string prefix,
+-                                    const std::unique_ptr<CommandBuilder>& command) {
++static OpCode DebugPrintCommandOpcode(std::string prefix,
++                                      const std::unique_ptr<CommandBuilder>& command) {
+   std::shared_ptr<std::vector<uint8_t>> packet_bytes = std::make_shared<std::vector<uint8_t>>();
+   BitInserter it(*packet_bytes);
+   command->Serialize(it);
+@@ -70,6 +71,7 @@ static void DebugPrintCommandOpcode(std::string prefix,
+   auto op_code = temp_cmd_view.GetOpCode();
+ 
+   log::info("{} op_code: {}", prefix, OpCodeText(op_code));
++  return op_code;
+ }
+ 
+ void HciLayerFake::EnqueueCommand(
+@@ -103,10 +105,15 @@ void HciLayerFake::EnqueueCommand(
+ }
+ 
+ void HciLayerFake::EnqueueCommand(
+-        std::unique_ptr<CommandBuilder> /* command */,
+-        common::ContextualOnceCallback<
+-                void(CommandStatusOrCompleteView)> /* on_status_or_complete */) {
+-  FAIL();
++        std::unique_ptr<CommandBuilder> command,
++        common::ContextualOnceCallback<void(CommandStatusOrCompleteView)> on_status_or_complete) {
++  {
++    std::lock_guard lock(mutex_);
++    auto opcode = DebugPrintCommandOpcode("Sending with command status or complete, ", command);
++    command_queue_.push(std::move(command));
++    command_status_or_complete_callbacks_.emplace_back(opcode, std::move(on_status_or_complete));
++  }
++  condition_.notify_all();
+ }
+ 
+ CommandView HciLayerFake::GetCommand() {
+@@ -240,9 +247,27 @@ void HciLayerFake::IncomingDevelopmentEvent(
+   registered_development_events_[subevent_code](development_event_view);
+ }
+ 
++std::optional<HciLayerFake::StatusOrCompleteCallback> HciLayerFake::TakeStatusOrCompleteCallback(
++        OpCode opcode) {
++  std::lock_guard lock(mutex_);
++  auto entry = std::find_if(command_status_or_complete_callbacks_.begin(),
++                            command_status_or_complete_callbacks_.end(),
++                            [opcode](const auto& pending) { return pending.first == opcode; });
++  if (entry == command_status_or_complete_callbacks_.end()) {
++    return std::nullopt;
++  }
++  auto callback = std::move(entry->second);
++  command_status_or_complete_callbacks_.erase(entry);
++  return callback;
++}
++
+ void HciLayerFake::CommandCompleteCallback(EventView event) {
+   CommandCompleteView complete_view = CommandCompleteView::Create(event);
+   ASSERT_TRUE(complete_view.IsValid());
++  if (auto callback = TakeStatusOrCompleteCallback(complete_view.GetCommandOpCode())) {
++    (*callback)(complete_view);
++    return;
++  }
+   common::ContextualOnceCallback<void(CommandCompleteView)> callback;
+   {
+     std::lock_guard lock(mutex_);
+@@ -255,6 +280,10 @@ void HciLayerFake::CommandCompleteCallback(EventView event) {
+ void HciLayerFake::CommandStatusCallback(EventView event) {
+   CommandStatusView status_view = CommandStatusView::Create(event);
+   ASSERT_TRUE(status_view.IsValid());
++  if (auto callback = TakeStatusOrCompleteCallback(status_view.GetCommandOpCode())) {
++    (*callback)(status_view);
++    return;
++  }
+   common::ContextualOnceCallback<void(CommandStatusView)> callback;
+   {
+     std::lock_guard lock(mutex_);
+diff --git a/system/gd/hci/hci_layer_fake.h b/system/gd/hci/hci_layer_fake.h
+index e769ddb45745865e7c82cdb90bc221af518650cc..4cf4da7eac613631a88f7642527e87d65f82a104 100644
+--- a/system/gd/hci/hci_layer_fake.h
++++ b/system/gd/hci/hci_layer_fake.h
+@@ -20,7 +20,9 @@
+ #include <list>
+ #include <map>
+ #include <memory>
++#include <optional>
+ #include <queue>
++#include <utility>
+ #include <vector>
+ 
+ #include "hci/hci_data_router.h"
+@@ -117,9 +119,16 @@ public:
+   os::Handler* handler_;
+ 
+ private:
++  using StatusOrCompleteCallback =
++          common::ContextualOnceCallback<void(CommandStatusOrCompleteView)>;
++
+   void InitEmptyCommand() LOCKS_EXCLUDED(mutex_);
+   void do_disconnect(uint16_t handle, ErrorCode reason);
++  std::optional<StatusOrCompleteCallback> TakeStatusOrCompleteCallback(OpCode opcode)
++          LOCKS_EXCLUDED(mutex_);
+ 
++  std::list<std::pair<OpCode, StatusOrCompleteCallback>> command_status_or_complete_callbacks_
++          GUARDED_BY(mutex_);
+   std::list<common::ContextualOnceCallback<void(CommandCompleteView)>> command_complete_callbacks_
+           GUARDED_BY(mutex_);
+   std::list<common::ContextualOnceCallback<void(CommandStatusView)>> command_status_callbacks_
+diff --git a/system/main/shim/hci_layer.cc b/system/main/shim/hci_layer.cc
+index f82bb3b5de8c5f2059297d52abf1a36bcc03e9fb..bc6b951ab476a3e352f8ab97bf76d0cdd11cd6bf 100644
+--- a/system/main/shim/hci_layer.cc
++++ b/system/main/shim/hci_layer.cc
+@@ -24,6 +24,7 @@
+ 
+ #include <algorithm>
+ #include <cstdint>
++#include <variant>
+ 
+ #include "common/bidi_queue.h"
+ #include "hci/hci_interface.h"
+@@ -211,6 +212,18 @@ static void OnTransmitPacketStatus(command_status_cb status_callback, void* cont
+   status_callback(status, static_cast<BT_HDR*>(command->Release()), context);
+ }
+ 
++static void OnTransmitPacketStatusOrComplete(command_complete_cb complete_callback,
++                                             command_status_cb status_callback, void* context,
++                                             std::unique_ptr<OsiObject> command,
++                                             bluetooth::hci::CommandStatusOrCompleteView view) {
++  if (auto* status = std::get_if<bluetooth::hci::CommandStatusView>(&view)) {
++    OnTransmitPacketStatus(status_callback, context, std::move(command), *status);
++  } else {
++    OnTransmitPacketCommandComplete(complete_callback, context,
++                                    std::get<bluetooth::hci::CommandCompleteView>(view));
++  }
++}
++
+ static void transmit_command(const BT_HDR* command, command_complete_cb complete_callback,
+                              command_status_cb status_callback, void* context) {
+   log::assert_that(command != nullptr, "assert failed: command != nullptr");
+@@ -233,7 +246,13 @@ static void transmit_command(const BT_HDR* command, command_complete_cb complete
+ 
+   log::debug("Sending command {}", bluetooth::hci::OpCodeText(op_code));
+ 
+-  if (bluetooth::hci::Checker::IsCommandStatusOpcode(op_code)) {
++  if (op_code == bluetooth::hci::OpCode::SNIFF_SUBRATING) {
++    bluetooth::shim::GetHciLayer()->EnqueueCommand(
++            std::move(packet),
++            bluetooth::shim::GetGdShimHandler()->BindOnce(
++                    OnTransmitPacketStatusOrComplete, complete_callback, status_callback, context,
++                    std::make_unique<OsiObject>(command)));
++  } else if (bluetooth::hci::Checker::IsCommandStatusOpcode(op_code)) {
+     auto command_unique = std::make_unique<OsiObject>(command);
+     bluetooth::shim::GetHciLayer()->EnqueueCommand(
+             std::move(packet),
+diff --git a/system/main/test/main_shim_test.cc b/system/main/test/main_shim_test.cc
+index add213af3e9a56ff57166b117a6eccea2895787f..58a9805baa115d280c7d6379927049924b03c524 100644
+--- a/system/main/test/main_shim_test.cc
++++ b/system/main/test/main_shim_test.cc
+@@ -53,6 +53,7 @@
+ #include "main/shim/acl_interface.h"
+ #include "main/shim/ble_scanner_interface_impl.h"
+ #include "main/shim/dumpsys.h"
++#include "main/shim/hci_layer.h"
+ #include "main/shim/helpers.h"
+ #include "main/shim/le_advertising_manager.h"
+ #include "main/shim/le_scanning_manager.h"
+@@ -60,7 +61,9 @@
+ #include "os/handler.h"
+ #include "os/queue.h"
+ #include "os/thread.h"
++#include "osi/include/allocator.h"
+ #include "packet/packet_view.h"
++#include "packet/raw_builder.h"
+ #include "stack/btm/btm_int_types.h"
+ #include "stack/btm/btm_security.h"
+ #include "stack/btm/internal/btm_api.h"
+@@ -71,6 +74,7 @@
+ #include "stack/l2cap/l2c_int.h"
+ #include "test/common/jni_thread.h"
+ #include "test/common/mock_functions.h"
++#include "test/fake/fake_osi.h"
+ #include "test/mock/mock_main_shim_entry.h"
+ 
+ using ::testing::_;
+@@ -79,7 +83,7 @@ using namespace bluetooth;
+ using namespace testing;
+ using HciHandle = uint16_t;
+ 
+-namespace test = bluetooth::hci::testing;
++namespace gd_test = bluetooth::hci::testing;
+ 
+ tL2C_CB l2cb;
+ tBTM_CB btm_cb;
+@@ -197,7 +201,13 @@ shim::acl_interface_t acl_interface{
+ };
+ 
+ static const shim::acl_interface_t& GetMockAclInterface() { return acl_interface; }
+-const packet_fragmenter_t* packet_fragmenter_get_interface() { return nullptr; }
++const packet_fragmenter_t* packet_fragmenter_get_interface() {
++  static const packet_fragmenter_t fragmenter{
++          .init = [](const packet_fragmenter_callbacks_t* callbacks) {
++            EXPECT_NE(nullptr, callbacks);
++          }};
++  return &fragmenter;
++}
+ 
+ template <typename T>
+ class MockEnQueue : public os::IQueueEnqueue<T> {
+@@ -325,29 +335,29 @@ protected:
+     thread_ = new os::Thread("acl_thread", os::Thread::Priority::NORMAL);
+     handler_ = new os::Handler(thread_);
+ 
+-    /* extern */ test::mock_controller_ =
++    /* extern */ gd_test::mock_controller_ =
+             std::make_unique<bluetooth::hci::testing::MockController>();
+-    /* extern */ test::mock_acl_manager_classic_ =
++    /* extern */ gd_test::mock_acl_manager_classic_ =
+             std::make_unique<bluetooth::hci::acl_manager::testing::MockAclManagerClassic>();
+-    /* extern */ test::mock_acl_manager_ =
++    /* extern */ gd_test::mock_acl_manager_ =
+             std::make_unique<bluetooth::hci::testing::MockAclManager>();
+-    /* extern */ test::mock_le_scanning_manager_ =
++    /* extern */ gd_test::mock_le_scanning_manager_ =
+             new bluetooth::hci::testing::MockLeScanningManager();
+-    /* extern */ test::mock_le_advertising_manager_ =
++    /* extern */ gd_test::mock_le_advertising_manager_ =
+             new bluetooth::hci::testing::MockLeAdvertisingManager();
+-    /* extern */ test::mock_distance_measurement_manager_ =
++    /* extern */ gd_test::mock_distance_measurement_manager_ =
+             new bluetooth::hci::testing::MockDistanceMeasurementManager();
+   }
+   void TearDown() override {
+-    test::mock_acl_manager_.release();
+-    test::mock_acl_manager_classic_.release();
+-    test::mock_controller_.reset();
+-    delete test::mock_le_advertising_manager_;
+-    test::mock_le_advertising_manager_ = nullptr;
+-    delete test::mock_le_scanning_manager_;
+-    test::mock_le_scanning_manager_ = nullptr;
+-    delete test::mock_distance_measurement_manager_;
+-    test::mock_distance_measurement_manager_ = nullptr;
++    gd_test::mock_acl_manager_.release();
++    gd_test::mock_acl_manager_classic_.release();
++    gd_test::mock_controller_.reset();
++    delete gd_test::mock_le_advertising_manager_;
++    gd_test::mock_le_advertising_manager_ = nullptr;
++    delete gd_test::mock_le_scanning_manager_;
++    gd_test::mock_le_scanning_manager_ = nullptr;
++    delete gd_test::mock_distance_measurement_manager_;
++    gd_test::mock_distance_measurement_manager_ = nullptr;
+ 
+     handler_->Clear();
+     delete handler_;
+@@ -362,10 +372,10 @@ protected:
+ 
+   // Convenience method to create ACL objects
+   std::unique_ptr<shim::Acl> MakeAcl() {
+-    EXPECT_CALL(*test::mock_acl_manager_classic_, RegisterCallbacks(_, _)).Times(1);
+-    EXPECT_CALL(*test::mock_acl_manager_, RegisterLeCallbacks(_, _)).Times(1);
+-    EXPECT_CALL(*test::mock_controller_, RegisterCompletedMonitorAclPacketsCallback(_)).Times(1);
+-    EXPECT_CALL(*test::mock_controller_, UnregisterCompletedMonitorAclPacketsCallback).Times(1);
++    EXPECT_CALL(*gd_test::mock_acl_manager_classic_, RegisterCallbacks(_, _)).Times(1);
++    EXPECT_CALL(*gd_test::mock_acl_manager_, RegisterLeCallbacks(_, _)).Times(1);
++    EXPECT_CALL(*gd_test::mock_controller_, RegisterCompletedMonitorAclPacketsCallback(_)).Times(1);
++    EXPECT_CALL(*gd_test::mock_controller_, UnregisterCompletedMonitorAclPacketsCallback).Times(1);
+     return std::make_unique<shim::Acl>(handler_, GetMockAclInterface());
+   }
+ };
+@@ -379,7 +389,7 @@ protected:
+     acl_ = MakeAcl();
+ 
+     // Create connection
+-    EXPECT_CALL(*test::mock_acl_manager_classic_, CreateConnection(_, _)).Times(1);
++    EXPECT_CALL(*gd_test::mock_acl_manager_classic_, CreateConnection(_, _)).Times(1);
+     acl_->CreateClassicConnection(address, 0);
+ 
+     // Respond with a mock connection created
+@@ -428,6 +438,109 @@ protected:
+ 
+ TEST_F(MainShimTest, Nop) {}
+ 
++class MainShimHciCommandTest : public testing::Test {
++protected:
++  void SetUp() override {
++    thread_ = std::make_unique<os::Thread>("hci_command_test", os::Thread::Priority::NORMAL);
++    handler_ = std::make_unique<os::Handler>(thread_.get());
++    gd_test::mock_gd_shim_handler_ = handler_.get();
++    gd_test::mock_hci_layer_ = std::make_unique<::testing::StrictMock<gd_test::MockHciLayer>>();
++  }
++
++  void TearDown() override {
++    handler_->Clear();
++    gd_test::mock_hci_layer_.reset();
++    gd_test::mock_gd_shim_handler_ = nullptr;
++    handler_.reset();
++    thread_.reset();
++  }
++
++  void TransmitSniffSubrating(bool status_event, hci::ErrorCode status) {
++    using ReplyCallback = common::ContextualOnceCallback<void(hci::CommandStatusOrCompleteView)>;
++    struct Result {
++      bool status_event;
++      hci::ErrorCode status;
++    };
++    struct Context {
++      const BT_HDR* command;
++      std::promise<Result> result;
++    };
++    auto bytes = hci::SniffSubratingBuilder::Create(0x123, 0x456, 0x789, 0xabc)->SerializeToBytes();
++    auto* command = static_cast<BT_HDR*>(osi_calloc(sizeof(BT_HDR) + bytes.size()));
++    ASSERT_NE(nullptr, command);
++    command->len = bytes.size();
++    std::copy(bytes.begin(), bytes.end(), command->data);
++    Context context{.command = command};
++    auto result = context.result.get_future();
++
++    EXPECT_CALL(*gd_test::mock_hci_layer_, EnqueueCommand(_, A<ReplyCallback>()))
++            .WillOnce([&](std::unique_ptr<hci::CommandBuilder> command_packet,
++                          ReplyCallback callback) {
++              EXPECT_EQ(bytes, command_packet->SerializeToBytes());
++              auto reply = status_event
++                                   ? hci::CommandStatusBuilder::Create(
++                                             status, 1, hci::OpCode::SNIFF_SUBRATING,
++                                             std::make_unique<packet::RawBuilder>())
++                                             ->SerializeToBytes()
++                                   : hci::SniffSubratingCompleteBuilder::Create(1, status, 0x123)
++                                             ->SerializeToBytes();
++              auto storage = std::make_shared<std::vector<uint8_t>>(std::move(reply));
++              auto event = hci::EventView::Create(hci::PacketView<hci::kLittleEndian>(storage));
++              ASSERT_TRUE(event.IsValid());
++              if (status_event) {
++                auto view = hci::CommandStatusView::Create(event);
++                ASSERT_TRUE(view.IsValid());
++                callback(view);
++              } else {
++                auto view = hci::CommandCompleteView::Create(event);
++                ASSERT_TRUE(view.IsValid());
++                callback(view);
++              }
++            });
++
++    shim::hci_layer_get_interface()->transmit_command(
++            command,
++            [](hci::CommandCompleteView view, void* opaque) {
++              auto reply = hci::SniffSubratingCompleteView::Create(view);
++              ASSERT_TRUE(reply.IsValid());
++              static_cast<Context*>(opaque)->result.set_value({false, reply.GetStatus()});
++            },
++            [](uint8_t status, BT_HDR* command, void* opaque) {
++              auto* context = static_cast<Context*>(opaque);
++              EXPECT_EQ(context->command, command);
++              osi_free(command);
++              context->result.set_value({true, static_cast<hci::ErrorCode>(status)});
++            },
++            &context);
++
++    ASSERT_EQ(std::future_status::ready, result.wait_for(std::chrono::seconds(1)));
++    auto reply = result.get();
++    EXPECT_EQ(status_event, reply.status_event);
++    EXPECT_EQ(status, reply.status);
++    std::promise<void> idle;
++    auto idle_future = idle.get_future();
++    handler_->Call([](std::promise<void> idle) { idle.set_value(); }, std::move(idle));
++    ASSERT_EQ(std::future_status::ready, idle_future.wait_for(std::chrono::seconds(1)));
++  }
++
++private:
++  ::test::fake::FakeOsi osi_;
++  std::unique_ptr<os::Thread> thread_;
++  std::unique_ptr<os::Handler> handler_;
++};
++
++TEST_F(MainShimHciCommandTest, SniffSubratingCommandComplete) {
++  TransmitSniffSubrating(false, hci::ErrorCode::SUCCESS);
++}
++
++TEST_F(MainShimHciCommandTest, SniffSubratingCommandStatus) {
++  TransmitSniffSubrating(true, hci::ErrorCode::SUCCESS);
++}
++
++TEST_F(MainShimHciCommandTest, SniffSubratingCommandStatusError) {
++  TransmitSniffSubrating(true, hci::ErrorCode::UNKNOWN_CONNECTION);
++}
++
+ TEST_F(MainShimTest, Acl_Lifecycle) {
+   auto acl = MakeAcl();
+   acl.reset();
+@@ -450,7 +563,7 @@ TEST_F(MainShimTest, connect_and_disconnect) {
+   auto acl = MakeAcl();
+ 
+   // Create connection
+-  EXPECT_CALL(*test::mock_acl_manager_classic_, CreateConnection(_, _)).Times(1);
++  EXPECT_CALL(*gd_test::mock_acl_manager_classic_, CreateConnection(_, _)).Times(1);
+   acl->CreateClassicConnection(address, 0);
+ 
+   // Respond with a mock connection created
+@@ -594,7 +707,7 @@ TEST_F(MainShimTest, DISABLED_BleScannerInterfaceImpl_OnScanResult) {
+ 
+ TEST_F(MainShimTest, DISABLED_LeShimAclConnection_local_disconnect) {
+   auto acl = MakeAcl();
+-  EXPECT_CALL(*test::mock_acl_manager_, CreateLeConnection(_, _, _)).Times(1);
++  EXPECT_CALL(*gd_test::mock_acl_manager_, CreateLeConnection(_, _, _)).Times(1);
+ 
+   hci::AddressWithType local_address(hci::Address{{0x01, 0x02, 0x03, 0x04, 0x05, 0x6}},
+                                      hci::AddressType::RANDOM_DEVICE_ADDRESS);
+diff --git a/system/stack/btu/btu_hcif.cc b/system/stack/btu/btu_hcif.cc
+index 40a0e04e6db7a55867c33f5a71818228f4b53231..543aba6b882369cf3aa662360e3533424107336a 100644
+--- a/system/stack/btu/btu_hcif.cc
++++ b/system/stack/btu/btu_hcif.cc
+@@ -40,6 +40,7 @@
+ #include <cstdint>
+ 
+ #include "btm_iso_api.h"
++#include "hci/event_checkers.h"
+ #include "hci/hci_packets.h"
+ #include "hci_evt_length.h"
+ #include "internal_include/bt_target.h"
+@@ -977,6 +978,10 @@ static void btu_hcif_hdl_command_complete(bluetooth::hci::CommandCompleteView vi
+     case HCI_READ_INQ_TX_POWER_LEVEL:
+       break;
+ 
++    case HCI_SNIFF_SUB_RATE:
++      hci::check_complete<hci::SniffSubratingCompleteView>(std::move(view));
++      break;
++
+     case HCI_BLE_CREATE_LL_CONN:
+     case HCI_LE_EXTENDED_CREATE_CONNECTION:
+       // No command complete event for those commands according to spec
+@@ -1124,6 +1129,7 @@ static void btu_hcif_hdl_command_status(uint16_t opcode, uint8_t status, const u
+       break;
+ 
+     // Command status event not handled by a specialized module
++    case HCI_SNIFF_SUB_RATE:
+     case HCI_READ_RMT_CLOCK_OFFSET:    // 0x041f
+     case HCI_CHANGE_CONN_PACKET_TYPE:  // 0x040f
+       if (hci_status != HCI_SUCCESS) {
+diff --git a/system/stack/l2cap/l2c_fcr.cc b/system/stack/l2cap/l2c_fcr.cc
+index 60ddaff473ecdb72607a54b0aefd60fe09856410..3924270ffcdd7218baf965c364b8498ab4009950 100644
+--- a/system/stack/l2cap/l2c_fcr.cc
++++ b/system/stack/l2cap/l2c_fcr.cc
+@@ -1849,6 +1849,13 @@ uint8_t l2c_fcr_process_peer_cfg_req(tL2C_CCB* p_ccb, tL2CAP_CFG_INFO* p_cfg) {
+                            L2CAP_SDU_LEN_OFFSET - fcs_len;
+       }
+ 
++      /* Ensure the MPS is at least the minimum */
++      if (p_cfg->fcr.mps > 0 && p_cfg->fcr.mps < 8) {
++        p_cfg->fcr.mps = 8;
++        p_ccb->out_cfg_fcr_present = true;
++        fcr_ok = L2CAP_PEER_CFG_UNACCEPTABLE;
++      }
++
+       /* Ensure the MPS is not bigger than the MTU */
+       if ((p_cfg->fcr.mps == 0) || (p_cfg->fcr.mps > p_ccb->peer_cfg.mtu)) {
+         p_cfg->fcr.mps = p_ccb->peer_cfg.mtu;

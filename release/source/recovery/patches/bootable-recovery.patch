@@ -1,0 +1,128 @@
+diff --git a/data.cpp b/data.cpp
+index aa4a5f240fe3d9580d106ed566afa3895b5086a7..6f44f4cd323e49eb1541f46d7c25df012de73a13 100644
+--- a/data.cpp
++++ b/data.cpp
+@@ -1272,7 +1272,11 @@ void DataManager::SetDefaultValues()
+   // End of the OrangeFox variables
+ 
+   mPersist.SetValue(TW_INSTALL_REBOOT_VAR, "0");
++#ifdef TW_OEM_BUILD
++  mConst.SetValue(TW_SIGNED_ZIP_VERIFY_VAR, "1");
++#else
+   mPersist.SetValue(TW_SIGNED_ZIP_VERIFY_VAR, "0");
++#endif
+   mPersist.SetValue(TW_DISABLE_FREE_SPACE_VAR, "0");
+   mPersist.SetValue(TW_FORCE_DIGEST_CHECK_VAR, "0");
+   mPersist.SetValue(TW_USE_COMPRESSION_VAR, "0");
+diff --git a/gui/action.cpp b/gui/action.cpp
+index bd5da2516094340e8494e8af11d2fda6a27c6b45..b44e29f1eb9367e468908c59ab41245c16ae083f 100644
+--- a/gui/action.cpp
++++ b/gui/action.cpp
+@@ -1303,6 +1303,7 @@ int GUIAction::checkpartitionlist(std::string arg)
+ int GUIAction::getpartitiondetails(std::string arg)
+ {
+   string List, part_path;
++  DataManager::SetValue("tw_partition_read_only", 1);
+ 
+   if (arg.empty())
+     arg = "part_option";
+@@ -1350,6 +1351,7 @@ int GUIAction::getpartitiondetails(std::string arg)
+ 				    Part->Removable);
+ 	      DataManager::SetValue("tw_partition_is_present",
+ 				    Part->Is_Present);
++	      DataManager::SetValue("tw_partition_read_only", Part->Is_Read_Only() ? 1 : 0);
+ 
+ 	      if (Part->Can_Repair())
+ 		DataManager::SetValue("tw_partition_can_repair", 1);
+@@ -2757,6 +2759,10 @@ int GUIAction::wlfx(std::string arg __unused)
+ 
+ int GUIAction::adb(std::string arg)
+ {
++  if (arg == "status") {
++    DataManager::SetValue("fox_adb", TWFunc::Fox_Property_Get("init.svc.adbd") == "running" ? "1" : "0");
++    return 0;
++  }
+   operation_start("ADB");
+   if (simulate)
+     {
+diff --git a/gui/theme/portrait_hdpi/pages/advanced.xml b/gui/theme/portrait_hdpi/pages/advanced.xml
+index bfed6852fe19220715ed46a9a307254ec967ceef..176771a31d38eadb72bcc4d873ebbeb8098cbea8 100644
+--- a/gui/theme/portrait_hdpi/pages/advanced.xml
++++ b/gui/theme/portrait_hdpi/pages/advanced.xml
+@@ -31,8 +31,7 @@
+ 				</listitem>
+ 				<listitem name="{@adb_sideload_btn}">
+ 					<icon res="devices"/>
+-					<action function="set">fox_adb=0</action>
+-					<action function="ftls">ps -eo 'comm' | grep adbd &amp;&amp; twrp xset fox_adb=1</action>
++					<action function="adb">status</action>
+ 					<action function="page">sideload</action>
+ 				</listitem>
+ 				<listitem name="{@reboot_btn}">
+diff --git a/gui/theme/portrait_hdpi/pages/wipe.xml b/gui/theme/portrait_hdpi/pages/wipe.xml
+index b8899de32f2443ea52e2c8716e623f11a131e94b..fe667cd00d69e8b53c558e18aebfdf16e109f1e1 100644
+--- a/gui/theme/portrait_hdpi/pages/wipe.xml
++++ b/gui/theme/portrait_hdpi/pages/wipe.xml
+@@ -497,6 +497,7 @@
+ 				</button>
+ 
+ 				<button style="btn_raised_hl">
++					<condition var1="tw_partition_read_only" var2="0"/>
+ 					<placement x="%btn_raised_right_x%" y="%row_btn1_y%" placement="1"/>
+ 					<text>{@change_fs_btn}</text>
+ 					<action function="page">selectfilesystem</action>
+diff --git a/minuitwrp/graphics_drm.cpp b/minuitwrp/graphics_drm.cpp
+index 0cc80f5cb0c00368556174c35dac0dbfe54ec6f9..d01fbe45fafbc0f24f81a79da588acdfa5d7d388 100644
+--- a/minuitwrp/graphics_drm.cpp
++++ b/minuitwrp/graphics_drm.cpp
+@@ -75,7 +75,7 @@ struct drm_surface {
+ 
+ #define NUM_MAIN 1
+ #define NUM_PLANES 4
+-#define DEFAULT_NUM_LMS 2
++#define DEFAULT_NUM_LMS 1
+ 
+ #define SPR_INIT_PARAM_SIZE_1 4
+ #define SPR_INIT_PARAM_SIZE_2 5
+@@ -474,11 +474,13 @@ static int atomic_populate_plane(int plane, drmModeAtomicReqPtr atomic_req) {
+   crtc_x = (width/number_of_lms) * plane;
+ 
+   /* populate z-order property required for 4 layer mixer */
+-  if (number_of_lms == 4)
++  if (number_of_lms == 4) {
+     zpos = plane >> 1;
+ 
+-  atomic_add_prop_to_plane(plane_res, atomic_req,
+-                           plane_res[plane].plane->plane_id, "zpos", zpos);
++    if (atomic_add_prop_to_plane(plane_res, atomic_req,
++                                plane_res[plane].plane->plane_id, "zpos", zpos))
++      return -EINVAL;
++  }
+ 
+   if (atomic_add_prop_to_plane(plane_res, atomic_req,
+                                plane_res[plane].plane->plane_id, "FB_ID",
+diff --git a/partitionmanager.cpp b/partitionmanager.cpp
+old mode 100755
+new mode 100644
+index 2fe66948113f7fa2ab57f94a8bfd47fe17cbbd1e..8b610080ba7aeab797228cdac3e654b3d630fc6b
+--- a/partitionmanager.cpp
++++ b/partitionmanager.cpp
+@@ -55,6 +55,7 @@
+ #include <fs_mgr.h>
+ #include <fs_mgr_dm_linear.h>
+ #include <fs_mgr_overlayfs.h>
++#include <private/android_filesystem_config.h>
+ #include <fs_mgr/roots.h>
+ #include <libgsi/libgsi.h>
+ #include <liblp/liblp.h>
+@@ -2887,7 +2888,9 @@ void TWPartitionManager::Get_Partition_List(string ListType,
+     {
+       for (iter = Partitions.begin(); iter != Partitions.end(); iter++)
+ 	{
+-	  if ((*iter)->Wipe_Available_in_GUI && !(*iter)->Is_SubPartition)
++	  if (((*iter)->Wipe_Available_in_GUI ||
++	       ((*iter)->Is_Present && (*iter)->Can_Be_Mounted)) &&
++	      !(*iter)->Is_SubPartition)
+ 	    {
+ 	      struct PartitionList part;
+ 	      part.Display_Name = (*iter)->Display_Name;

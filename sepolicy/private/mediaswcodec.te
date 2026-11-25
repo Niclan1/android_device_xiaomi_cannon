@@ -1,0 +1,5 @@
+# FMQ memfd labelled plain tmpfs on mainline kernels
+allow mediaswcodec tmpfs:file { map read write };
+
+# Codec2 surface and FMQ buffers shared by clients and media services.
+allow mediaswcodec { appdomain_tmpfs mediaserver_tmpfs system_server_tmpfs }:file { map read write };

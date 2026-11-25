@@ -1,0 +1,2 @@
+# AudioFlinger shares memfd backed buffers on mainline kernels
+allow system_server audioserver_tmpfs:file { read write getattr map };

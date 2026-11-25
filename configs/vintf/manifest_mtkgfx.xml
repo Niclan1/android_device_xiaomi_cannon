@@ -1,0 +1,25 @@
+<!--
+    HIDL graphics HALs of the MTK display blobs (hwcomposer, gralloc
+    allocator/mapper 4.0). They need the 4.14 vendor kernel. The "mainline"
+    vendor SKUs (ro.boot.product.vendor.sku, set by libinit on 6.x kernels)
+    leave this file out: drm_hwcomposer and minigbm come from vendor APEXes
+    with their own VINTF fragments there, and a declared HIDL allocator would
+    let hwservicemanager restart the crashing MTK gralloc service on demand.
+-->
+<manifest version="4.0" type="device">
+    <hal format="hidl">
+        <name>android.hardware.graphics.allocator</name>
+        <transport>hwbinder</transport>
+        <fqname>@4.0::IAllocator/default</fqname>
+    </hal>
+    <hal format="hidl">
+        <name>android.hardware.graphics.composer</name>
+        <transport>hwbinder</transport>
+        <fqname>@2.3::IComposer/default</fqname>
+    </hal>
+    <hal format="hidl">
+        <name>android.hardware.graphics.mapper</name>
+        <transport arch="32+64">passthrough</transport>
+        <fqname>@4.0::IMapper/default</fqname>
+    </hal>
+</manifest>
